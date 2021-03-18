@@ -29,6 +29,8 @@ library(gifski)
 library(av)
 library(gapminder)
 library(stringr)
+library(readr)
+library(zoo)
 ```
 
 
@@ -48,6 +50,21 @@ PIB_Anim <- PIB_Anim %>% group_by(Year,Estado) %>% summarise(PIB=sum(PIB)) %>%
     arrange(Year,desc(PIB)) %>% 
    mutate(ranking = row_number()) %>% filter(ranking<=15)
 ```
+```{r}
+Visitantes<- read_excel("BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "Visitantes")
+colnames(Visitantes) <-  c("Year","Mes","Aeropuerto","Nacionalidad","Regiones","Sexo","Entradas")
+Visitantes$Mes <- substring(Visitantes$Mes,1,3) %>% tolower()
+#Sys.getlocale("LC_TIME")
+#Sys.setlocale("LC_TIME", "C")
+#Sys.setlocale("LC_TIME","Spanish")
+Visitantes$Periodo <- paste(Visitantes$Mes,Visitantes$Year,sep="-")
+Visitantes$Periodo <- as.yearmon(Visitantes$Periodo,"%b-%Y")
+Visitantes$Periodo <- Visitantes$Periodo %>% as.Date() 
+Visitantes <-  Visitantes %>% as_tsibble(index=Periodo,
+                                         key=c(Aeropuerto,Nacionalidad,
+                                               Regiones,Sexo))
+```
+
 
 
 ```{r}
@@ -271,6 +288,17 @@ datatable(PIB_Test,
           options = list(pageLength = 25))
 ```
 
+
+Detalles Visitantes
+========================================
+
+```{r}
+datatable(Visitantes,
+          caption = "Tabla de Visitantes",
+          rownames = T,
+          filter = "top",
+          options = list(pageLength = 25))
+```
 
 
 

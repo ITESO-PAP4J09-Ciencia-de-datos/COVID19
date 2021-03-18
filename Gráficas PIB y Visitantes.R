@@ -29,6 +29,17 @@ PIB_Tsibble <- PIB %>% as_tsibble(index=Year,key=c(Estado,Nombre_Sector,Activida
 PIB_Tsibble1 <- PIB_Tsibble %>% filter(Estado=="Jalisco") %>% distinct(Nombre_Sector)
 
 
+p4 <- PIB_Test %>% group_by(Estado) %>% 
+  summarize(PIB1=sum(PIB)) %>% 
+  ggplot(aes(x=Year,y=PIB1)) +
+  geom_line(aes(color=Estado),size=1.3) +
+  scale_y_log10() 
+
+p4 + transition_reveal(PIB1)
+
+anim_save(file_name= "C:/Users/JoseGallardo/Documents/Ajolotec/PAP/GIF_TEST.gif")
+
+
 
 
 PIB_Tsibble1 %>% ?autoplot()
@@ -196,5 +207,22 @@ Graf3 + geom_col(aes(fill=Formal)) +
   ggtitle("Cantidad de personas en secotres, se?alados por tipo de empleo")
 
 
+
+
+```{r}
+Visitantes<- read_excel("BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "Visitantes") %>% as_tsibble(index=c(Año,Mes),key=c(Aeropuerto,Nacionalidad,
+                                                                                                                           Regiones,Sexo))
+colnames(Visitantes) <-  c("Year","Mes","Aeropuerto","Nacionalidad","Regiones","Sexo","Entradas")
+Visitantes$Mes <- NULL
+#Visitantes$Date <-  as.Date(paste(Visitantes$Year,Visitantes$Mes,sep="-"),"%Y-%M-%d")
+#df$Date <- as.Date(paste(df$year, df$month, sep="-"), "%Y-%M")
+Visitantes <-  Visitantes %>% as_tsibble(index=Year,
+                                         key=c(Aeropuerto,Nacionalidad,
+                                               Regiones,Sexo)) %>% 
+  group_by(Aeropuerto,Nacionalidad,
+           Regiones,Sexo)
+head(Visitantes %>% group_by(Aeropuerto,Nacionalidad,
+                             Regiones,Sexo))
+```
 
 
