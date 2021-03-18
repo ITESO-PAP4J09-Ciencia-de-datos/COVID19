@@ -36,33 +36,61 @@ library(zoo)
 
 ```{r}
 #PIB <- read_excel("C:/Users/JoseGallardo/Documents/Ajolotec/PAP/BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "PIB")
-PIB <- read_excel("BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "PIB")
+PIB <- read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "PIB")
 colnames(PIB) <- c("Clave","Estado","Year","Clave_Sector","Nombre_Sector","Actividad","PIB")
- PIB_Test <- PIB %>% as_tsibble(index=Year,key=c(Estado,Nombre_Sector)) %>% 
+ PIB_Test <- PIB %>% 
+   as_tsibble(index=Year,key=c(Estado,Nombre_Sector)) %>% 
    group_by(Estado,Nombre_Sector,Actividad) %>% 
-  summarise(PIB=sum(PIB))
+   summarise(PIB=sum(PIB))
 
 PIB_Anim <- PIB_Test
 PIB_Anim$Nombre_Sector <- NULL
 PIB_Anim$Actividad <- NULL
 
-PIB_Anim <- PIB_Anim %>% group_by(Year,Estado) %>% summarise(PIB=sum(PIB)) %>%  
-    arrange(Year,desc(PIB)) %>% 
-   mutate(ranking = row_number()) %>% filter(ranking<=15)
+PIB_Anim <- PIB_Anim %>% 
+  group_by(Year,Estado) %>% 
+  summarise(PIB=sum(PIB)) %>% 
+  arrange(Year,desc(PIB)) %>% 
+  mutate(ranking = row_number()) %>% 
+  filter(ranking<=15)
 ```
+
 ```{r}
-Visitantes<- read_excel("BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "Visitantes")
+# REVISAR LA PAQUETERÍA MULTIDPLYR PARA REALIZAR EL TRABAJO EN PARALELO EN VARIOS NÚCLEOS
+
+Visitantes<- read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "Visitantes")
 colnames(Visitantes) <-  c("Year","Mes","Aeropuerto","Nacionalidad","Regiones","Sexo","Entradas")
-Visitantes$Mes <- substring(Visitantes$Mes,1,3) %>% tolower()
-#Sys.getlocale("LC_TIME")
-#Sys.setlocale("LC_TIME", "C")
-#Sys.setlocale("LC_TIME","Spanish")
-Visitantes$Periodo <- paste(Visitantes$Mes,Visitantes$Year,sep="-")
-Visitantes$Periodo <- as.yearmon(Visitantes$Periodo,"%b-%Y")
-Visitantes$Periodo <- Visitantes$Periodo %>% as.Date() 
-Visitantes <-  Visitantes %>% as_tsibble(index=Periodo,
-                                         key=c(Aeropuerto,Nacionalidad,
-                                               Regiones,Sexo))
+
+Visitantes %>% 
+  # slice_sample(n = 500) %>% 
+  mutate(
+    Mes = str_trunc(Mes, side = "right", width = 3, ellipsis = ""),
+    Mes = case_when(
+      Mes == "Ene" ~ "Jan",
+      Mes == "Abr" ~ "Apr",
+      Mes == "Ago" ~ "Aug",
+      Mes == "Dic" ~ "Dec",
+      TRUE         ~ Mes
+    )
+  ) %>% 
+  unite(Periodo, Year:Mes, sep = " ", remove = FALSE) %>%
+  mutate(Periodo = yearmonth(Periodo)) %>% 
+  as_tsibble(
+    index = Periodo,
+    key   = c(Aeropuerto, Nacionalidad, Regiones, Sexo)
+  )
+
+# Visitantes$Mes <- substring(Visitantes$Mes,1,3) %>% tolower()
+# Sys.getlocale("LC_TIME")
+# Sys.setlocale("LC_TIME", "C")
+# Sys.setlocale("LC_TIME","Spanish")
+# Sys.setlocale("LC_TIME","Spanish")
+# Visitantes$Periodo <- paste(Visitantes$Mes,Visitantes$Year,sep="-")
+# Visitantes$Periodo <- as.yearmon(Visitantes$Periodo,"%b-%Y")
+# Visitantes$Periodo <- Visitantes$Periodo %>% as.Date() 
+# Visitantes <-  Visitantes %>% as_tsibble(index=Periodo,
+#                                          key=c(Aeropuerto,Nacionalidad,
+#                                                Regiones,Sexo))
 ```
 
 
