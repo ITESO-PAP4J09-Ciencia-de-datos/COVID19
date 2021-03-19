@@ -2,7 +2,7 @@ library(tidyverse)
 
 delitos <- read_csv("delitos2015-2021.csv")
 
-#quedarse solo con las columnas necesarios
+#quedarse solo con las columnas necesarias
 feminicidios <- delitos %>%
   select( Ano, Entidad, Tipo_de_delito, Enero:Diciembre ) %>%
   filter( Tipo_de_delito == "Feminicidio") %>% 
