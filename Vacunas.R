@@ -8,6 +8,9 @@ latam <- c("Mexico", "Argentina",
            "Guatemala", "Panama", 
            "Paraguay", "Peru", 
            "Puerto Rico", "Dominican Republic")
+europa <- c()
+
+america_norte <- c("United States", "Canada")
 
 Vacunas_latam <- Vacunastotales %>%
   select( date, location, total_vaccinations, 
