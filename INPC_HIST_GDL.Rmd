@@ -1,0 +1,240 @@
+---
+title: "INPC_HIST_GDL"
+output: html_document
+---
+
+
+
+```{r, include=FALSE, warning=FALSE}
+library(fable)
+library(feasts)
+library(tsibble)
+library(tsibbledata)
+library(readxl)
+library(tidyverse)
+library(lubridate)
+library(patchwork)
+library(plotly)
+library(gganimate)
+library(quantmod)
+#library(dplyr)
+library(GGally)
+library("easypackages")
+packages("tidyverse","lubridate", "patchwork", "fpp2","fpp3","scales","DT")
+```
+
+
+```{r, include=FALSE, warning=FALSE}
+INPC <- read_excel("HistINPC.xlsx")
+INPCG <- select(INPC, -"INPC Nacional")
+INPCN <- select(INPC, -"INPC Guadalajara")
+```
+
+
+```{r, include=FALSE, warning=FALSE}
+INPCG <- INPCG %>%
+  mutate(Month = yearmonth(Fecha)) %>%
+  select(-Fecha) %>%
+  as_tsibble(index = Month) #%>% 
+#mutate(diff_INPCJ = difference(Índice))
+
+```
+
+
+```{r, include=FALSE, warning=FALSE}
+INPCN <- INPCN %>%
+  mutate(Month = yearmonth(Fecha)) %>%
+  select(-Fecha) %>%
+  as_tsibble(index = Month) #%>% 
+#mutate(diff_INPCJ = difference(Índice))
+
+```
+
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+autoplot(INPCG) 
+```
+
+
+
+
+
+
+```{r, fig.align='center', echo=FALSE}
+IG1<-INPCG %>%
+  gg_season(`INPC Guadalajara`, labels = "both") +
+  labs(y = "Indice",x="Mes",
+       title = "Grafica estacional INPC General")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+IG2<-INPCG %>% 
+  gg_subseries(`INPC Guadalajara`) +
+  labs(y = "Indice", x="Mes",
+    title = "Subserie de Índice General" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+IG3<-INPCG %>% 
+  gg_lag(`INPC Guadalajara`, geom = "point", lags=1:3) +
+  labs(title = "Diferenciacion en Índice General")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+IG4<-INPCG %>%
+  model(STL(`INPC Guadalajara` ~ trend(window=7) + season(window='periodic'),
+    robust = TRUE)) %>%
+  components() %>%
+  autoplot()  + labs(y = "Indice", x="Mes",
+    title = "Descomposición STL serie de Índice General" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+IG5<-INPCG %>% 
+  PACF(`INPC Guadalajara`) %>% autoplot()
+
+IG6<-INPCG %>% 
+  ACF(`INPC Guadalajara`) %>% autoplot()
+
+
+(IG1 | IG2 ) 
+(IG3 | IG4 ) 
+(IG5 | IG6 )
+
+
+```
+
+
+
+```{r, echo=FALSE, fig.align='center'}
+
+fitIG <- INPCG%>%
+  model(ARIMA(`INPC Guadalajara` ~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE))
+report(fitIG)
+
+fitIG %>% gg_tsresiduals()
+
+INPCG %>%
+  model(ARIMA(`INPC Guadalajara` ~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(INPCG) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (2,2,4) de Indice General")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+
+```{r, echo=FALSE, fig.align='center'}
+
+fitIG <- INPCG%>%
+  model(ARIMA(`INPC Guadalajara`,
+              stepwise = FALSE, approximation = FALSE))
+report(fitIG)
+
+fitIG %>% gg_tsresiduals()
+
+INPCG %>%
+  model(ARIMA(`INPC Guadalajara`,
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(INPCG) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (1,2,1)(2,0,0) de Indice General")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+autoplot(INPCN) 
+```
+
+
+
+```{r, fig.align='center', echo=FALSE}
+IN1<-INPCN %>%
+  gg_season(`INPC Nacional`, labels = "both") +
+  labs(y = "Indice",x="Mes",
+       title = "Grafica estacional INPC General")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+IN2<-INPCN %>% 
+  gg_subseries(`INPC Nacional`) +
+  labs(y = "Indice", x="Mes",
+    title = "Subserie de Índice General" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+IN3<-INPCN %>% 
+  gg_lag(`INPC Nacional`, geom = "point", lags=1:3) +
+  labs(title = "Diferenciacion en Índice General")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+IN4<-INPCN %>%
+  model(STL(`INPC Nacional` ~ trend(window=7) + season(window='periodic'),
+    robust = TRUE)) %>%
+  components() %>%
+  autoplot()  + labs(y = "Indice", x="Mes",
+    title = "Descomposición STL serie de Índice General" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+IN5<-INPCN %>% 
+  PACF(`INPC Nacional`) %>% autoplot()
+
+IN6<-INPCN %>% 
+  ACF(`INPC Nacional`) %>% autoplot()
+
+
+(IN1 | IN2 ) 
+
+(IN3 | IN4 ) 
+
+(IN5 | IN6 )
+
+
+```
+
+
+```{r, echo=FALSE, fig.align='center'}
+
+fitIN <- INPCN%>%
+  model(ARIMA(`INPC Nacional` ~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE))
+report(fitIN)
+
+fitIN %>% gg_tsresiduals()
+
+INPCN %>%
+  model(ARIMA(`INPC Nacional` ~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(INPCN) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (5,2,1) de Indice General")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+```{r, echo=FALSE, fig.align='center'}
+
+fitIN <- INPCN%>%
+  model(ARIMA(`INPC Nacional`,
+              stepwise = FALSE, approximation = FALSE))
+report(fitIN)
+
+fitIN %>% gg_tsresiduals()
+
+INPCN %>%
+  model(ARIMA(`INPC Nacional`,
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(INPCN) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (1,1,2)(1,1,2) de Indice General")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+
+
+
+
