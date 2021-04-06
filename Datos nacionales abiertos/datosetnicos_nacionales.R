@@ -21,42 +21,88 @@ library(hrbrthemes) #fuentes de una publicación que hizo el economista poniendo
 
 # Importación de datos tibble ----------------------------------------------
 
-data_raw <- read_csv("Datos nacionales abiertos/210131COVID19MEXICO.csv")
+# data_raw <- read_csv("Datos nacionales abiertos/210131COVID19MEXICO.csv")
+
+# Descarga de datos desde la página web
+fecha <- "210405"
+
+temp <- tempfile()
+download.file("http://datosabiertos.salud.gob.mx/gobmx/salud/datos_abiertos/datos_abiertos_covid19.zip", temp)
+
+
+data_raw <- vroom::vroom(unz(temp, paste0(fecha,"COVID19MEXICO.csv")))
+unlink(temp)
+
 etiqueta_SINO <- read_xlsx("Datos nacionales abiertos/201128 Catalogos.xlsx", sheet = "Catalogo SI_NO")
 etiqueta_NACIONALIDAD <- read_xlsx("Datos nacionales abiertos/201128 Catalogos.xlsx", sheet = "Catalogo NACIONALIDAD")
 etiqueta_TPACIENTE <- read_xlsx("Datos nacionales abiertos/201128 Catalogos.xlsx", sheet = "Catalogo TIPO_PACIENTE")
 etiqueta_SEXO <- read_xlsx("Datos nacionales abiertos/201128 Catalogos.xlsx", sheet = "Catalogo SEXO")
 
 # Wrangled Data -------------------------------------------------------------
-data_raw <- data_raw %>% 
-  mutate(PAIS_ORIGEN = as.double(PAIS_ORIGEN))
+# data_raw <- data_raw %>% 
+#   mutate(PAIS_ORIGEN = as.double(PAIS_ORIGEN))
 
 data_raw %>% glimpse()
 
-data_etnica <- data_raw %>% 
-  select('SEXO', 'INTUBADO',
-         'HABLA_LENGUA_INDIG', 'TIPO_PACIENTE',
-         'NACIONALIDAD','INDIGENA','EDAD',
-         'PAIS_ORIGEN', 'MIGRANTE', 'UCI') %>%
+data_raw %>% 
+  slice_head(n = 100) %>% view()
+
+
+data_raw %>% 
+  slice_head(n = 10000) %>% 
+  # Convertir a factores las variables
+  mutate(across(!contains("FECHA"), as_factor),
+         EDAD = as.numeric(EDAD)) %>%
+  # Nacionalidad
+  left_join(etiqueta_NACIONALIDAD, by = c("NACIONALIDAD" = "CLAVE")) %>% 
+  mutate(NACIONALIDAD = DESCRIPCIÓN,
+         DESCRIPCIÓN  = NULL) %>% 
+  # Sexo
+  left_join(etiqueta_SEXO, by = c("SEXO" = "CLAVE")) %>% 
+  mutate(SEXO        = DESCRIPCIÓN,
+         DESCRIPCIÓN = NULL) %>% 
+  # Tipo de paciente
+  left_join(etiqueta_TPACIENTE, by = c("TIPO_PACIENTE" = "CLAVE")) %>% 
+  mutate(TIPO_PACIENTE = DESCRIPCIÓN,
+         DESCRIPCIÓN   = NULL) %>% 
+  # Pasar a filas las cols. de si/no
   pivot_longer(
-    cols = c(
-      'HABLA_LENGUA_INDIG',
-      'INDIGENA',
-      'PAIS_ORIGEN'),
-    names_to = 'ETNICOS',
-    values_to = 'CONTEOx'
-  ) %>%
-pivot_longer(
-  cols = c(
-    'INTUBADO',
-    'UCI'),
-  names_to =  'RESPUESTA_ETNICOS',
-  values_to = 'CONTEOy'
-  ) %>%
-  left_join(etiqueta_SINO, by=c('CONTEOx' = 'CLAVE')) %>%
-  left_join(etiqueta_SINO, by=c('CONTEOy' = 'CLAVE')) %>%
-  left_join(etiqueta_TPACIENTE, by=c('TIPO_PACIENTE' = 'CLAVE')) %>%
-  left_join(etiqueta_NACIONALIDAD, by=c('NACIONALIDAD' = 'CLAVE'))
+    cols = c(HABLA_LENGUA_INDIG, INDIGENA, MIGRANTE, UCI, INTUBADO),
+    values_to = "CLAVE"
+  ) %>% 
+  left_join(etiqueta_SINO, by = "CLAVE") %>% 
+  mutate(CLAVE = DESCRIPCIÓN,
+         DESCRIPCIÓN = NULL) %>%
+  # Regresar a columnas
+  pivot_wider(
+    names_from  = name,
+    values_from = CLAVE 
+  )
+
+# data_etnica <- data_raw %>% 
+#   select('SEXO', 'INTUBADO',
+#          'HABLA_LENGUA_INDIG', 'TIPO_PACIENTE',
+#          'NACIONALIDAD','INDIGENA','EDAD',
+#          'PAIS_ORIGEN', 'MIGRANTE', 'UCI') %>%
+#   pivot_longer(
+#     cols = c(
+#       'HABLA_LENGUA_INDIG',
+#       'INDIGENA',
+#       'PAIS_ORIGEN'),
+#     names_to = 'ETNICOS',
+#     values_to = 'CONTEOx'
+#   ) %>%
+# pivot_longer(
+#   cols = c(
+#     'INTUBADO',
+#     'UCI'),
+#   names_to =  'RESPUESTA_ETNICOS',
+#   values_to = 'CONTEOy'
+#   ) %>%
+#   left_join(etiqueta_SINO, by=c('CONTEOx' = 'CLAVE')) %>%
+#   left_join(etiqueta_SINO, by=c('CONTEOy' = 'CLAVE')) %>%
+#   left_join(etiqueta_TPACIENTE, by=c('TIPO_PACIENTE' = 'CLAVE')) %>%
+#   left_join(etiqueta_NACIONALIDAD, by=c('NACIONALIDAD' = 'CLAVE'))
 
 
 
@@ -83,29 +129,29 @@ MuertesTotales <- length(which(!is.na(data_edad_Rtable_raw$FECHA_DEF)))
    #  )
  
          
-data_edad <- select(data_raw,'CLASIFICACION_FINAL' , 
-                         'EDAD','INTUBADO', 'UCI', 
-                         'SEXO', 'TIPO_PACIENTE',
-                    'FECHA_DEF') %>%
-  left_join(etiqueta_SINO, by=c('INTUBADO' = 'CLAVE')) %>%
-  left_join(etiqueta_SINO, by = c('UCI' = 'CLAVE')) %>%
-  left_join(etiqueta_SEXO, by=c('SEXO' = 'CLAVE')) %>%
-  left_join(etiqueta_TPACIENTE, by=c('TIPO_PACIENTE' = 'CLAVE')) %>%
-  
-  pivot_longer(
-    cols = c(
-    'UCI',
-    'INTUBADO'),
-    names_to = 'RESPUESTA_EDAD',
-    values_to = 'CONTEOy'
-  )
+# data_edad <- select(data_raw,'CLASIFICACION_FINAL' , 
+#                          'EDAD','INTUBADO', 'UCI', 
+#                          'SEXO', 'TIPO_PACIENTE',
+#                     'FECHA_DEF') %>%
+#   left_join(etiqueta_SINO, by=c('INTUBADO' = 'CLAVE')) %>%
+#   left_join(etiqueta_SINO, by = c('UCI' = 'CLAVE')) %>%
+#   left_join(etiqueta_SEXO, by=c('SEXO' = 'CLAVE')) %>%
+#   left_join(etiqueta_TPACIENTE, by=c('TIPO_PACIENTE' = 'CLAVE')) %>%
+#   
+#   pivot_longer(
+#     cols = c(
+#     'UCI',
+#     'INTUBADO'),
+#     names_to = 'RESPUESTA_EDAD',
+#     values_to = 'CONTEOy'
+#   )
 
 #data_edad <- rename(data_edad, INTUBADO_Exp = DESCRIPCIÓN)
 
-data_edad$EDAD <- cut(data_edad$EDAD , breaks = seq(0,100,by = 10), right = TRUE)
-data_edad %>%
-  group_by(EDAD) %>%
-tally()
+# data_edad$EDAD <- cut(data_edad$EDAD , breaks = seq(0,100,by = 10), right = TRUE)
+# data_edad %>%
+#   group_by(EDAD) %>%
+# tally()
 
 
 #Visualización y gráficas ---------------------------------------------------------
