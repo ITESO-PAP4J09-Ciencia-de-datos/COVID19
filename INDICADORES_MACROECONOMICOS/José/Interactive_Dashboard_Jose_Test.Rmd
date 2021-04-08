@@ -21,6 +21,7 @@ library(ggvis)
 library(tidyverse)
 library(tsibble)
 library(feasts)
+library(fable)
 library(readxl)
 #library(tidyr)
 library(lubridate)
@@ -31,17 +32,21 @@ library(gapminder)
 library(stringr)
 library(readr)
 library(zoo)
+library(forecast)
+#library(multidplyr)
+#library(rvest) 
+#library(quantmod) 
 ```
 
 
 ```{r}
 #PIB <- read_excel("C:/Users/JoseGallardo/Documents/Ajolotec/PAP/BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "PIB")
-PIB <- read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "PIB")
-colnames(PIB) <- c("Clave","Estado","Year","Clave_Sector","Nombre_Sector","Actividad","PIB")
- PIB_Test <- PIB %>% 
-   as_tsibble(index=Year,key=c(Estado,Nombre_Sector)) %>% 
-   group_by(Estado,Nombre_Sector,Actividad) %>% 
-   summarise(PIB=sum(PIB))
+PIB1 <- read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "PIB")
+colnames(PIB1) <- c("Clave","Estado","Year","Clave_Sector","Nombre_Sector","Actividad","PIB")
+PIB_Test <- PIB1 %>% 
+  as_tsibble(index=Year,key=c(Estado,Nombre_Sector)) %>% 
+  group_by(Estado,Nombre_Sector,Actividad) %>% 
+  summarise(PIB=sum(PIB))
 
 PIB_Anim <- PIB_Test
 PIB_Anim$Nombre_Sector <- NULL
@@ -53,6 +58,30 @@ PIB_Anim <- PIB_Anim %>%
   arrange(Year,desc(PIB)) %>% 
   mutate(ranking = row_number()) %>% 
   filter(ranking<=15)
+
+
+
+#PIB_Test1 <- PIB_Test %>% filter(Estado=="Ciudad de México")
+# modelo<-auto.arima(PIB_Test1[,5])
+# pronostico<- forecast(modelo,h=40)
+# plot(pronostico, main="Pronóstico con auto.arima",
+# ylab="PIB ciudad de México")
+
+
+
+# Ari <- PIB_Test %>% filter(Estado=="Ciudad de México") %>%  model(ARIMA(PIB)) 
+# 
+# PIB_Test %>% filter(Estado=="Ciudad de México") %>% autoplot(PIB)
+# 
+# 
+# tsibbledata::gafa_stock %>%
+#  autoplot(vars(Close, log(Close)))
+# 
+# 
+# 
+# autoplot(forecast(modelo))
+
+
 ```
 
 ```{r}
@@ -61,8 +90,8 @@ PIB_Anim <- PIB_Anim %>%
 Visitantes<- read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "Visitantes")
 colnames(Visitantes) <-  c("Year","Mes","Aeropuerto","Nacionalidad","Regiones","Sexo","Entradas")
 
-Visitantes %>% 
-  # slice_sample(n = 500) %>% 
+Visitantes <- Visitantes %>% 
+  slice_sample(n = 500) %>% 
   mutate(
     Mes = str_trunc(Mes, side = "right", width = 3, ellipsis = ""),
     Mes = case_when(
@@ -259,8 +288,8 @@ datatable(PIB_Table,
 
 
 
-Gráfica PIB Animada
-=====================================
+##Gráfica PIB Animada
+##=====================================
 ```{r}
 # p4 <- PIB_Test %>% group_by(Estado) %>% 
 #   summarize(PIB1=sum(PIB)) %>% 
@@ -269,10 +298,10 @@ Gráfica PIB Animada
 #   scale_y_log10() 
 # 
 # p4 <- p4 + transition_reveal(PIB1)
-# 
+# ![Prueba de gráfica Animada](figs/GIF_TEST.gif)
+
 # anim_save("figs/GIF_TEST.gif",p4)
 ```
-![Prueba de gráfica Animada](figs/GIF_TEST.gif)
 
 Gráfica PIB Animada
 =====================================
@@ -317,11 +346,27 @@ datatable(PIB_Test,
 ```
 
 
+
+Visitantes
+========================================
+
+```{r}
+datatable(PIB_Test,
+          caption = "Tabla de PIB",
+          rownames = T,
+          filter = "top",
+          options = list(pageLength = 25))
+```
+
+
+
+
 Detalles Visitantes
 ========================================
 
 ```{r}
-datatable(Visitantes,
+datatable(Visitantes %>%
+            group_by(Year,Mes,Aeropuerto),
           caption = "Tabla de Visitantes",
           rownames = T,
           filter = "top",

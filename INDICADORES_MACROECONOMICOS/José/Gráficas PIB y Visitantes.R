@@ -3,6 +3,10 @@ library(tidyverse)
 library(tsibble)
 library(feasts)
 
+
+install.packages("devtools")
+devtools::install_github("hadley/multidplyr")
+
 ##Gr?fica PIB
 PIB <- read_excel("C:/Users/JoseGallardo/Documents/Ajolotec/PAP/BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "PIB")
 #Filtrar del dataset solo los datos que sean de Jalisco
@@ -224,5 +228,36 @@ Visitantes <-  Visitantes %>% as_tsibble(index=Year,
 head(Visitantes %>% group_by(Aeropuerto,Nacionalidad,
                              Regiones,Sexo))
 ```
+
+
+install.packages("multidplyr")
+
+
+
+library(rvest)
+# Web-scrape SP500 stock list from Wikipedia
+sp_500 <- read_html("https://en.wikipedia.org/wiki/List_of_S%26P_500_companies") %>%
+  html_node("table.wikitable") %>%
+  html_table() %>%
+  select(`Ticker symbol`, Security) %>%
+  as_tibble() %>%
+  rename(symbol = `Ticker symbol`,
+         company = Security)
+# Show results
+sp_500
+
+
+library(parallel)
+cl <- detectCores()
+cl
+
+group <- rep(1:cl, length.out = nrow(sp_500))
+sp_500 <- bind_cols(tibble(group), sp_500)
+sp_500
+
+
+
+library(forecast)
+
 
 
