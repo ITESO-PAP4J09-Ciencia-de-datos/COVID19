@@ -1,6 +1,9 @@
 library(tidyverse)
 Vacunastotales <- read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations.csv")
 
+
+
+
 latam <- c("Mexico", "Argentina", 
            "Colombia", "Chile", 
            "Brazil", "Bolivia", 
@@ -8,9 +11,7 @@ latam <- c("Mexico", "Argentina",
            "Guatemala", "Panama", 
            "Paraguay", "Peru", 
            "Puerto Rico", "Dominican Republic")
-europa <- c()
 
-america_norte <- c("United States", "Canada")
 
 Vacunas_latam <- Vacunastotales %>%
   select( date, location, total_vaccinations, 
