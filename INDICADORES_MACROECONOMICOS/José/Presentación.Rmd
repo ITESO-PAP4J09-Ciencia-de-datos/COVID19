@@ -103,7 +103,7 @@ index = Month) #%>%
 
 ```
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE,fig.dim=c(8.6)}
+```{r, echo=FALSE, warning=FALSE, message=FALSE,fig.dim=c(10,8)}
 autoplot(INPCJ)
 ```
 
