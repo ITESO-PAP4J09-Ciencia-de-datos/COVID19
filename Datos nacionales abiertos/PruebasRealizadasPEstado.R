@@ -30,7 +30,7 @@ Datosmex2502 <- vroom::vroom(unz(temp, paste0(fecha,"COVID19MEXICO.csv")))
 unlink(temp)
 
 
-Entidades <- read_xlsx("201128 Catalogos.xlsx",sheet="Catálogo de ENTIDADES")
+Entidades <- read_xlsx("Datos nacionales abiertos/201128 Catalogos.xlsx",sheet="Catálogo de ENTIDADES")
 # Clásificación  ----------------------------------------------------------
 
 #datos necesarios para la prueba
