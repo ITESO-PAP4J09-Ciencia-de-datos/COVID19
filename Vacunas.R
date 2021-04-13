@@ -159,6 +159,7 @@ wrap_plots(A = EscenarioLatam,
            D = g3, 
            E = g4, 
            design = layout)
+<<<<<<< HEAD
 
 
 # Definición del modelo ---------------------------------------------------
@@ -210,3 +211,5 @@ fcst %>%
 
 fcst3 = fcst1 + fcst2 
 fcst3
+=======
+>>>>>>> 5c1455c78781175836584d210785ee4a174d13fb
