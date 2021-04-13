@@ -159,3 +159,56 @@ wrap_plots(A = EscenarioLatam,
            D = g3, 
            E = g4, 
            design = layout)
+<<<<<<< HEAD
+
+
+# Definición del modelo ---------------------------------------------------
+
+
+TSLM(total_vaccinations_per_hundred ~ trend())
+
+
+# Entrenamiento del modelo (Estimación) -----------------------------------
+
+fit <- Vacunas_latam_tsibble %>%
+  model(Modelo_tendencia = 
+          TSLM(total_vaccinations_per_hundred ~ trend()))
+fit
+
+
+# Revisar el desempeño del modelo (evaluación) ----------------------------
+
+
+# Producir pronósticos ----------------------------------------------------
+
+#Se genera la tabla de pronósticos, el cual va ser
+#una tabla de tipo fable (objeto) es decir
+#forecasting table
+fcst <- fit %>% forecast(h = 3) #se hace para los siguientes 3 meses
+                                #pues los datos que se tienen hasta el momento
+                                # son de 4 - 5 meses
+fcst
+
+# Visualización de la forecasting table
+
+#para grupo 1 latama
+
+fcst %>%
+  filter(location %in% latam1) %>%
+  autoplot(Vacunas_latam_tsibble) +
+  ggtitle('Vacunas en LATAM') + 
+  ylab('Vacunas aplicadas por cada 100') -> fcst1
+
+#para grupo 2 latam
+
+fcst %>%
+  filter(location %in% latam2) %>%
+  autoplot(Vacunas_latam_tsibble) +
+  ggtitle('Vacunas en LATAM') + 
+  ylab('Vacunas aplicadas por cada 100') -> fcst2
+
+#integración de las visualizaciones
+
+fcst3 = fcst1 + fcst2 
+fcst3
+
