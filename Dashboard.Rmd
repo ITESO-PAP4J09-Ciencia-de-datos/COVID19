@@ -62,9 +62,10 @@ library(jsonlite)
 
 ```{r}
 
-data <- read_csv("C:/Users/Usuario/Desktop/pap1_cienciadatos_pmv2021/Pruebas/Prueba_Dashboard/VehicleFailure.csv")
+data <- read_csv("VehicleFailure.csv")
   
-delitos <- read_csv("C:/Users/Usuario/Desktop/pap1_cienciadatos_pmv2021/Pruebas/Prueba_Dashboard/delitos2015-2021.csv", locale(encoding = "latin1"),
+delitos <- read_csv("delitos2015-2021.csv", 
+                    locale(encoding = "latin1"),
                     col_names = TRUE, 
                     col_types = NULL
                  )
