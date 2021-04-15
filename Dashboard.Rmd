@@ -1,0 +1,495 @@
+---
+title: "COVID19 Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    social: [ "twitter", "facebook", "menu"]
+    source_code: embed
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(knitr)
+library(DT)
+library(rpivotTable)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(openintro)
+library(highcharter)
+library(ggvis)
+library(tidyverse)
+library(lubridate)
+# library(tibbletime)
+library(reactable)
+library(htmltools)
+library(tsibble)
+library(feasts)
+library(fable)
+library(kableExtra)
+library(formattable)
+#importación y lectura
+library(readxl)
+library(tidyr)
+library(vroom)
+#Mapas
+library(leaflet)
+library(ggmap) # -> para obtener lon y lat de los municipios
+library(raster)
+library(spData)
+library(tmap)
+library(RJSONIO)
+library(tmaptools)
+library(Hmisc)
+library(mxmaps) #se instala con un repo de gitgub con el 
+                #siguiente comando
+                #if (!require("devtools")) {
+#     install.packages("devtools")
+# }
+# devtools::install_github("diegovalle/mxmaps")
+
+library(sf)
+library(scales) # needed for comma
+library(rgeos)
+library(maptools)
+library(leaflet)
+library(geojsonio)
+library(jsonlite)
+
+```
+
+
+```{r}
+
+data <- read_csv("C:/Users/Usuario/Desktop/pap1_cienciadatos_pmv2021/Pruebas/Prueba_Dashboard/VehicleFailure.csv")
+  
+delitos <- read_csv("C:/Users/Usuario/Desktop/pap1_cienciadatos_pmv2021/Pruebas/Prueba_Dashboard/delitos2015-2021.csv", locale(encoding = "latin1"),
+                    col_names = TRUE, 
+                    col_types = NULL
+                 )
+  #######Quedarse solo con las columnas y filas necesarias#######
+
+delitos_a_comparar <- c("Feminicidio", "Abuso sexual", 
+                        "Acoso sexual", "Hostigamiento sexual",
+                        "Otros delitos que atentan contra la libertad y la seguridad sexual",
+                        "Violación simple", "Violación equiparada", "Trata de personas",
+                        "Tráfico de menores", "Secuestro", "Violencia familiar")
+
+delitos_tidy <- delitos %>%
+  filter( Tipo_de_delito %in% delitos_a_comparar | 
+          Subtipo_de_delito == "Homicidio doloso" |
+          Subtipo_de_delito == "Lesiones dolosas" ) %>% 
+  pivot_longer(
+  cols = Enero:Diciembre ,
+  names_to = "Meses",
+  values_to = "Cuenta"
+) %>% 
+  group_by(Ano, Meses, Tipo_de_delito, Subtipo_de_delito) %>% 
+  summarise(Cuenta = sum(Cuenta), .groups = "drop")
+
+delitos_tidy <- delitos_tidy %>% 
+  mutate(
+    Meses = str_trunc(Meses, width = 3, ellipsis = ""),
+    Meses = case_when(
+      Meses == "Ene" ~ "Jan",
+      Meses == "Abr" ~ "Apr",
+      Meses == "Ago" ~ "Aug",
+      Meses == "Dic" ~ "Dec",
+      TRUE           ~ Meses
+    )
+  ) %>% 
+  unite(col = "Fecha", c(Ano,Meses), sep = " ") %>% 
+  mutate(Fecha = yearmonth(Fecha))
+
+delitos_tidy_tsbl <- delitos_tidy %>% 
+  as_tsibble(
+    index = Fecha,
+    key   = c(Tipo_de_delito, Subtipo_de_delito)
+  )
+
+mycolors <- c("blue", "#FFC125", "darkgreen", "darkorange")
+```
+
+Delitos en época de COVID19
+=====================================
+<!-- Row -->
+<!-- ------------------------------------- -->
+
+<!-- ### Delitos en tiempos de COVID19 -->
+
+<!-- ```{r} -->
+<!-- valueBox(paste("Delitos"), -->
+<!--          color = "warning") -->
+<!-- ``` -->
+
+<!-- ### Homicidios en tiempos de COVID19 -->
+
+<!-- ```{r} -->
+
+<!-- valueBox(length(data$State), -->
+<!--          icon = "money") -->
+<!-- ``` -->
+
+<!-- ### **Labor Cost** -->
+
+<!-- ```{r} -->
+<!-- gauge(round(mean(data$lc), -->
+<!--             digits = 2), -->
+<!--             min = 0, -->
+<!--             max = 350, -->
+<!--             gaugeSectors(success = c(0, 150), -->
+<!--                          warning = c(150, 240), -->
+<!--                          danger = c(240, 350), -->
+<!--                          colors = c("green", "yellow", "red"))) -->
+<!-- ``` -->
+
+<!-- ### Massachusetts -->
+
+<!-- ```{r} -->
+<!-- valueBox(sum(data$State == "MA"), -->
+<!--          icon = 'fa-building') -->
+<!-- ``` -->
+
+<!-- ### California -->
+
+<!-- ```{r} -->
+<!-- valueBox(sum(data$State == "CA"), -->
+<!--          icon = 'fa-building') -->
+<!-- ``` -->
+
+<!-- ### Texas -->
+
+<!-- ```{r} -->
+<!-- valueBox(sum(data$State == "TX"), -->
+<!--          icon = 'fa-building') -->
+<!-- ``` -->
+
+<!-- ### Florida -->
+
+<!-- ```{r} -->
+<!-- valueBox(sum(data$State == "FL"), -->
+<!--          icon = 'fa-building') -->
+<!-- ``` -->
+
+Row
+-------------------------------
+
+### Tabla de incidencia
+
+```{r}
+
+
+#Tabla de incidencia
+
+Incidencia_2019 <-delitos_tidy_tsbl %>% 
+  tsibble::group_by_key() %>% 
+  tsibble::index_by(Año = year(Fecha)) %>% 
+  dplyr::summarise(Cuenta = sum(Cuenta)) %>% 
+  dplyr::filter(Año %in% 2019) %>%
+  dplyr::as_tibble(Incidencia_2019) %>%
+  dplyr::transmute( Delito = Tipo_de_delito, 
+                    Incidencia_2019 = Cuenta) 
+
+Incidencia_2020 <- delitos_tidy_tsbl %>%
+  group_by_key() %>%
+  
+  index_by(Año = year(Fecha)) %>%
+  
+  dplyr::summarise(Cuenta = sum(Cuenta)) %>%
+  dplyr::filter(Año %in% 2020) %>%
+  dplyr::as_tibble(Incidencia_2020) %>%
+  dplyr::mutate(Delito = Tipo_de_delito,
+        Incidencia_2020 = Cuenta) %>%
+  dplyr::select(Delito, Incidencia_2020)
+
+Incidencia <- Incidencia_2020 %>%
+  add_column(Incidencia_2019$Incidencia_2019) %>%
+  dplyr::mutate(
+    Porcentaje_de_cambio = round((
+      (Incidencia_2020 - Incidencia_2019$Incidencia_2019)/Incidencia_2020), digits = 5),
+    Incidencia_2019 = Incidencia_2019$Incidencia_2019) %>%
+  
+  dplyr::select(Delito, Incidencia_2019, Incidencia_2020, Porcentaje_de_cambio)%>%
+  arrange(desc(Porcentaje_de_cambio)) 
+ 
+Tabla <- Incidencia %>%
+  mutate(Porcentaje_de_cambio =  percent(Porcentaje_de_cambio, 2)) %>%
+  kbl(fortmat = "htlm", col.names = c("Delitos",
+                                      "Incidencia en 2019",
+                                      "Incidencia en 2020",
+                                      "Porcentaje de cambio")) %>%
+  
+  kable_styling(bootstrap_options = "striped",
+                full_width = F,
+                position = "left",
+                font_size = 14) %>%
+  
+  column_spec(4,color = ifelse( Incidencia$Porcentaje_de_cambio > 0, "red", "green"))
+Tabla
+
+
+```
+
+
+### Delitos sexuales y de género
+
+```{r}
+
+sexuales_y_genero = c("Abuso sexual", 
+                      "Acoso sexual",
+                      "Feminicidio", 
+                      "Violación simple", 
+                      "Violación equiparada", 
+                      "Hostigamiento sexual", 
+                      "Otros delitos que atentan contra la libertad y la seguridad sexual")
+
+p2 <-  delitos_tidy_tsbl %>%
+  filter (Tipo_de_delito %in% sexuales_y_genero) %>%
+  ggplot() + 
+  geom_line(mapping = aes(x = Fecha, y = Cuenta, color = Tipo_de_delito))
+
+p2
+
+```
+
+### Delitos contra la libertad
+
+```{r}
+p3 <- delitos_tidy_tsbl %>%
+  filter (Tipo_de_delito %in% c("Trata de personas", "Tráfico de menores", "Secuestro") ) %>%
+  ggplot() + 
+  geom_line(mapping = aes(x = Fecha, y = Cuenta, color = Tipo_de_delito))
+
+p3
+```
+
+Row
+------------------------------------
+### Delitos dolosos 
+
+```{r}
+p4 <- delitos_tidy_tsbl %>%
+  filter(Subtipo_de_delito %in% c("Lesiones dolosas", "Homicidio doloso")) %>%
+  ggplot() + 
+  geom_line(mapping = aes(x = Fecha, y = Cuenta, color = Tipo_de_delito))
+
+p4
+```
+
+### Delitos violencia familiar 
+
+```{r}
+p5 <- delitos_tidy_tsbl %>%
+  filter (Tipo_de_delito == "Violencia familiar") %>%
+  ggplot() +
+  geom_line(mapping = aes(x = Fecha, y = Cuenta, color = Tipo_de_delito))
+
+p5
+```
+
+Map
+========================================
+
+### Map
+
+```{r}
+# car <- data %>%
+#          group_by(State) %>%
+#          summarize(total = n())
+# car$State <- abbr2state(car$State)
+# 
+# highchart() %>%
+#          hc_title(text = "Car Failures in US") %>%
+#          hc_subtitle(text = "Source: Vehiclefailure.csv") %>%
+#          hc_add_series_map(usgeojson, car,
+#                            name = "State",
+#                            value = "total",
+#                            joinBy = c("woename", "State")) %>%
+
+#          hc_mapNavigation(enabled = T)
+
+fecha <- "210414"
+options(timeout = 700)
+temp <- tempfile()
+download.file("http://datosabiertos.salud.gob.mx/gobmx/salud/datos_abiertos/datos_abiertos_covid19.zip", temp)
+
+
+Datosmex2502 <- vroom::vroom(unz(temp, paste0(fecha,"COVID19MEXICO.csv")))
+unlink(temp)
+
+```
+
+```{r}
+
+Entidades <- read_xlsx("C:/Users/Usuario/Desktop/pap1_cienciadatos_pmv2021/Pruebas/Prueba_Dashboard/201128 Catalogos.xlsx",sheet="Catálogo de ENTIDADES")
+
+# Clasificación de datos  -------------------------------------------------
+
+#datos necesarios para la prueba
+datosimportates <- dplyr::select(Datosmex2502,`FECHA_INGRESO`,`ENTIDAD_RES`,
+                                 `TOMA_MUESTRA_LAB`,`RESULTADO_LAB`, `TOMA_MUESTRA_ANTIGENO`,
+                                 `RESULTADO_ANTIGENO`, `CLASIFICACION_FINAL`)%>%
+  left_join(Entidades, by=c("ENTIDAD_RES"="CLAVE_ENTIDAD"))
+
+#datos confirmados sin realización de pruebas
+confirmados <- datosimportates %>% 
+  filter(`CLASIFICACION_FINAL`%in% c(1,2,3)) %>% 
+  dplyr::select(`FECHA_INGRESO`, `ENTIDAD_RES`, `ENTIDAD_FEDERATIVA`, `ABREVIATURA`) %>% 
+  mutate(
+    year = lubridate::year(FECHA_INGRESO),
+    month = lubridate::month(FECHA_INGRESO),
+    day = lubridate::day(FECHA_INGRESO)
+  ) %>% 
+  drop_na(`ENTIDAD_FEDERATIVA`, `FECHA_INGRESO`) 
+
+# Agrupación de datos  ----------------------------------------------------
+#Numero de positivos por estado
+positivosestado <- confirmados %>%
+  group_by(`ENTIDAD_RES`) %>%
+  summarise(
+    count=n(),
+  )
+
+#Selección de nombre estados, por orden de codigo
+nombreEstado <- Entidades %>%
+  dplyr::select(`ENTIDAD_FEDERATIVA`) %>%
+  slice( 1:32)
+
+mapaPositivos <- positivosestado %>%
+  add_column(nombreEstado)
+
+# Mapa  -------------------------------------------------------------------
+
+# data(mapaPositivos)
+# mapaPositivos$rand <- mapaPositivos$count
+# mapaPositivos$region <- mapaPositivos$ENTIDAD_RES
+# mxstate_choropleth(mapaPositivos,
+#                    title = "Casos confirmados de COVID por estado.",
+#                    legend = "Número de casos.",
+# )
+
+
+# Convert the topoJSON to spatial object
+tmpdir <- tempdir()
+# have to use RJSONIO or else the topojson isn't valid
+write(RJSONIO::toJSON(mxstate.topoJSON), file.path(tmpdir, "sta.topojson"))
+mxstate <- topojson_read(file.path(tmpdir, "sta.topojson")) 
+
+
+#ordenamos los datos del topoJSON en orden numérico
+mxstate <- mxstate[order(mxstate$id),]
+
+
+mxstate <- as_Spatial(mxstate)
+
+mxstate$rand <- mapaPositivos$count
+
+bins <- c(5000,20000 , 30000, 35000, 50000, 60000, 115000,300000, Inf)
+pal <- colorBin("YlOrRd", domain = mxstate$rand, bins=bins)
+
+
+etiqueta <- paste(
+  "Estado: ", mapaPositivos$ENTIDAD_FEDERATIVA, "<br/>",
+  "Número de casos: ", mapaPositivos$count
+) %>%
+  lapply(htmltools::HTML)
+
+leaflet(mxstate) %>%
+  addPolygons(
+              fillColor = ~pal(mxstate$rand),
+              fillOpacity = 1,
+              stroke = TRUE,
+              color = "White",
+              weight = 1.5, 
+              dashArray = "3",
+              highlight = highlightOptions(
+                weight = 5,
+                color = "#666",
+                dashArray = "",
+                fillOpacity = 0.7,
+                bringToFront = TRUE),
+              label = etiqueta,
+  )%>%
+addLegend(pal = pal, values = ~mapaPositivos$rand, opacity = 0.7, title = "Casos<br>positivos<br>contagios",
+          position = "bottomright")%>%
+  addTiles() %>%
+  addMarkers(50, 50) %>%
+  addControl("Positivos totales COVID19 México", position = "bottomleft") %>% 
+addProviderTiles("CartoDB.Positron")
+
+```
+
+Data Table
+========================================
+
+```{r}
+datatable(data,
+          caption = "Failure Data",
+          rownames = T,
+          filter = "top",
+          options = list(pageLength = 25))
+```
+
+Pivot Table
+=========================================
+
+```{r}
+rpivotTable(data,
+            aggregatorName = "Count",
+            cols= "fm",
+            rows = "State",
+            rendererName = "Heatmap")
+```
+
+Summary {data-orientation=columns} 
+===========================================
+
+Column 
+-----------------------------------
+
+### Max Failure Month
+
+```{r}
+valueBox(max(data$fm),
+         icon = "fa-user" )
+```
+
+### Average Labor cost
+```{r}
+valueBox(round(mean(data$lc),
+               digits = 2),
+         icon = "fa-area-chart")
+```
+
+### Average Mileage at Failure
+
+```{r}
+valueBox(round(mean(data$Mileage), digits = 2),
+         icon = "fa-area-chart")
+```
+
+Column
+---------------------------
+
+Report
+
+* This is a report on `r length(data$fm)` car failures.
+
+* The average labor cost was `r mean(data$lc)`.
+
+* The average material cost was `r mean(data$mc)`.
+
+This report was generated on `r format(Sys.Date(), format = "%B %d, %Y")`.
+
+About Report
+========================================
+
+Created by: Data Scientist at ABC
+
+Confidential: HIGHLY!
+
+
+
+
+
