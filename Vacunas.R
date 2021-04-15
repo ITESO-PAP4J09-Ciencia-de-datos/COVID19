@@ -28,9 +28,9 @@ Vacunastotales <- readr::read_csv("https://raw.githubusercontent.com/owid/covid-
 # a tsibble un objeto que tiene orientación a este tiempo de 
 #procesamiento 
 Vacunastotales_tsibble <- Vacunastotales %>%
-  mutate(Daily = as.Date(date)) %>%
-  select(-date) %>%
-  as_tsibble(key = location,
+  dplyr::mutate(Daily = as.Date(date)) %>%
+  dplyr::select(-date) %>%
+  tsibble::as_tsibble(key = location,
              index = Daily)
 
 #se hace una variable con los nombres de los paises de
@@ -60,7 +60,7 @@ Vacunastotales_tsibble <- Vacunastotales %>%
 #hacemos otro dafa frame que solo sea para los de 
 #LATAM y asi trabajamos con un tsibble más pequeña
 Vacunas_latam_tsibble <- Vacunastotales_tsibble %>%
-  select( Daily, location, total_vaccinations, 
+  dplyr::select( Daily, location, total_vaccinations, 
           total_vaccinations_per_hundred, 
           daily_vaccinations_per_million) %>%
   filter(location %in% latam)
@@ -159,7 +159,6 @@ wrap_plots(A = EscenarioLatam,
            D = g3, 
            E = g4, 
            design = layout)
-<<<<<<< HEAD
 
 
 # Definición del modelo ---------------------------------------------------
