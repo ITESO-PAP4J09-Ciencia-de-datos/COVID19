@@ -1,6 +1,7 @@
 ---
 title: "PAP presentation"
 output: powerpoint_presentation
+ #  reference_doc: template.pptx
 ---
 
 ```{r setup, include=FALSE}
@@ -78,6 +79,82 @@ p1 <- PIB_Test %>% group_by(Estado) %>%
 p1
 ```
 
+## Visitantes
+
+Analizaremos la cantidad de Visitantes extranjeros por entrada aérea, por nacionalidad en algunos de los aeropuertos de nuestro país, esto con la intención de ver como el turismo se va manejando a tráves de los años y de esta manera poder también relacionarlo con otros indicadores macroeconomicos
+
+## Gráficas sobre visitantes
+
+```{r}
+# REVISAR LA PAQUETERÍA MULTIDPLYR PARA REALIZAR EL TRABAJO EN PARALELO EN VARIOS NÚCLEOS
+
+Visitantes<- read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "Visitantes")
+colnames(Visitantes) <-  c("Year","Mes","Aeropuerto","Nacionalidad","Regiones","Sexo","Entradas")
+
+
+Visitantes <- Visitantes %>% filter(Aeropuerto=="Acapulco, Gro."|
+                        Aeropuerto== "Aguascalientes, Ags."|
+                        Aeropuerto== "Cancún, Q. Roo"|
+                        Aeropuerto=="Ciudad de México (AICM)"|
+                        Aeropuerto=="Guadalajara, Jal.")
+
+
+
+Visitantes <- Visitantes %>% 
+  #slice_sample(n = 500) %>% 
+  mutate(
+    Mes = str_trunc(Mes, side = "right", width = 3, ellipsis = ""),
+    Mes = case_when(
+      Mes == "Ene" ~ "Jan",
+      Mes == "Abr" ~ "Apr",
+      Mes == "Ago" ~ "Aug",
+      Mes == "Dic" ~ "Dec",
+      TRUE         ~ Mes
+    )
+  ) %>% 
+  unite(Periodo, Year:Mes, sep = " ", remove = FALSE) %>%
+  mutate(Periodo = yearmonth(Periodo)) %>% 
+  as_tsibble(
+    index = Periodo,
+    key   = c(Aeropuerto, Nacionalidad, Regiones,Sexo)
+  )
+
+```
+
+```{r}
+Visitantes <- Visitantes %>% group_by(Regiones,Sexo) %>% summarise(Entradas=sum(Entradas))
+p5 <- Visitantes %>%
+  ggplot(aes(x=Periodo,y=Entradas)) +
+  geom_line(aes(color=Sexo)) +
+  facet_grid(Regiones~Sexo,scales = "free")
+
+p5
+```
+
+## Comportamiento de visitantes 
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,fig.dim=c(10,8)}
+Visitantes1 <- Visitantes %>% filter(Sexo=="Hombre"& Regiones=="África")
+autoplot(Visitantes1)
+```
+
+## Predicción
+```{r}
+
+Visitantes1 <- Visitantes %>% filter(Sexo=="Hombre"& Regiones=="África")
+
+############ Predictions using tsibbles
+Visitantes2 <- Visitantes1 %>%
+  model(arima=ARIMA(Entradas),ets=ETS(Entradas)) %>%
+  forecast(h=5)
+
+autoplot(Visitantes2,level=NULL) 
+
+```
+
+
+
 ## INPC
 
 Vamos a analizar el INPC (Indice Nacional de Precios al Consumidor).
@@ -153,15 +230,69 @@ IED_tsbl %>%
 
 Introducción Encuesta Nacional de ocupación y empleo
 
-## Slide with R Output
 
-```{r cars, echo = TRUE}
-summary(cars)
+## IMSS
+
+
+Asegurados o cotizantes : Se refiere a las personas que están aseguradas en el IMSS de manera directa como titulares. Incluye todas las modalidades de aseguramiento, tanto las relacionadas con puestos de trabajo afiliados al IMSS, como las afiliaciones de asegurados sin un empleo asociado en las modalidades 32, 33 y 40. No considera a pensionados o jubilados, ni a los beneficiarios de asegurados, pensionados o jubilados. 
+
+
+
+## Gráfica de IMSS
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,fig.dim=c(10,8)}
+IMSS <- read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "IMSS")
+#Cambiar el nombre de las columnas para facilitar los calculos
+colnames(IMSS) <- c("Division","Grupo","Fracción","Fecha","Trabajadores_Asegurados","Trabajadores_Permanentes","Trabajadores_Eventuales")
+
+IMSS_tbl <- IMSS %>% 
+  mutate(Fecha = yearmonth(Fecha))
+#group_by(IMSS$Fecha)
+
+IMSS_tbl <- IMSS_tbl %>% 
+  as_tsibble(
+    index = Fecha,
+    key   = c(Division, Grupo, Fracción) 
+  )
+
+var2 <- IMSS_tbl %>%
+  group_by(Division,Grupo) %>%
+  summarise(Trabajadores_Asegurados=sum(Trabajadores_Asegurados))
+
+var2 <- var2 %>% filter(Division=="Agricultura, ganadería, silvicultura, pesca y caza"&Grupo=="Ganadería")
+
+autoplot(var2)
+
+
+
+
+
 ```
 
-## Slide with Plot
+## Predicción
 
-```{r pressure}
-plot(pressure)
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,fig.dim=c(10,8)}
+
+var2.1 <- var2 %>%
+  model(arima=ARIMA(Trabajadores_Asegurados)) %>%
+  forecast(h=5)
+
+autoplot(var2.1)
+
+
+
+
 ```
+
+
+
+
+
+
+
+
+
+
+
 

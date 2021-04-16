@@ -118,19 +118,6 @@ Visitantes <- Visitantes %>%
     key   = c(Aeropuerto, Nacionalidad, Regiones,Sexo)
   )
 
- unique(Visitantes$Nacionalidad)
-
-# Visitantes$Mes <- substring(Visitantes$Mes,1,3) %>% tolower()
-# Sys.getlocale("LC_TIME")
-# Sys.setlocale("LC_TIME", "C")
-# Sys.setlocale("LC_TIME","Spanish")
-# Sys.setlocale("LC_TIME","Spanish")
-# Visitantes$Periodo <- paste(Visitantes$Mes,Visitantes$Year,sep="-")
-# Visitantes$Periodo <- as.yearmon(Visitantes$Periodo,"%b-%Y")
-# Visitantes$Periodo <- Visitantes$Periodo %>% as.Date() 
-# Visitantes <-  Visitantes %>% as_tsibble(index=Periodo,
-#                                          key=c(Aeropuerto,Nacionalidad,
-#                                                Regiones,Sexo))
 ```
 
 
@@ -361,99 +348,98 @@ datatable(PIB_Test,
 Visitantes
 ========================================
 
-```{r}
-datatable(PIB_Test,
-          caption = "Tabla de PIB",
-          rownames = T,
-          filter = "top",
-          options = list(pageLength = 25))
-```
-
-
-
-
-Detalles Visitantes
-========================================
-
+### Gráficas
 ```{r}
 Visitantes <- Visitantes %>% group_by(Regiones,Sexo) %>% summarise(Entradas=sum(Entradas))
-
-p5 <- Visitantes %>% 
+Visitantesx <- Visitantes %>% filter (Sexo=="Hombre")
+p5 <- Visitantesx %>%
   ggplot(aes(x=Periodo,y=Entradas)) +
   geom_line(aes(color=Sexo)) +
   facet_grid(Regiones~Sexo,scales = "free")
 
 p5
+```
 
-Visitantes1 <- Visitantes %>% filter(Sexo=="Hombre"&Regiones=="África")
+### Gráficas
+```{r}
+Visitantes <- Visitantes %>% group_by(Regiones,Sexo) %>% summarise(Entradas=sum(Entradas))
+Visitantesx <- Visitantes %>% filter (Sexo=="Mujer")
+p5 <- Visitantesx %>%
+  ggplot(aes(x=Periodo,y=Entradas)) +
+  geom_line(aes(color=Sexo)) +
+  facet_grid(Regiones~Sexo,scales = "free")
 
-############ Predictions using tsibbles
-Visitantes4 <- Visitantes1 %>%
-  model(arima=ARIMA(Entradas),ets=ETS(Entradas),snaive=SNAIVE(Entradas~lag(Periodo))) %>%
-  forecast(h=5)
-
-autoplot(Visitantes4,level=NULL) 
-
-
-
-
-
-
-############### Predictions using time series
-
-Visitantes2 <- ts(Visitantes1[,"Entradas"],start=c(2012,1),frequency=12)
-
-Visitantes3 <- ts(Visitantes1[,"Entradas"],start=c(2012,1),end=2019,frequency=12)
-
-#Try to graph the data
-autoplot(Visitantes2) +
-  ggtitle("Visitantes Hombres de África") +
-  ylab("Entradas")
-
-autoplot(Visitantes3) +
-  ggtitle("Visitantes Hombres de África") +
-  ylab("Entradas")
-
-#Build our Model
-
-fit_Arima <- auto.arima(Visitantes2,seasonal=T)
-summary(fit_Arima)
-checkresiduals(fit_Arima)
-
-fit_Arima <- auto.arima(Visitantes3,seasonal=T)
-summary(fit_Arima)
-checkresiduals(fit_Arima)
-
-
-#forecast
-fcast <- forecast(fit_Arima,h=5)
-autoplot(fcast)
-
-
-Visitantes4 <- Visitantes1 %>% model(arima=ARIMA(Entradas),ets=ETS(Entradas)) %>% forecast(h=10)
-
-autoplot(Visitantes4,level=NULL) 
-
-
+p5
 ```
 
 
 
-
-
-
-
-Detalles Visitantes
+Predicciones
 ========================================
 
+### Gráfica
 ```{r}
-#datatable(Visitantes %>%
- #           group_by(Periodo,Aeropuerto),
-  #        caption = "Tabla de Visitantes",
-   #       rownames = T,
-    #      filter = "top",
-     #     options = list(pageLength = 25))
+Visitantes1 <- Visitantes %>% filter(Sexo=="Hombre"&Regiones=="África")
+autoplot(Visitantes1) + ylab("Entradas") + ggtitle("Visitantes Hombres de Africa")
 ```
+
+
+### Predicciones 
+
+
+```{r}
+############ Predictions using tsibbles
+Visitantes2 <- Visitantes1 %>%
+  model(arima=ARIMA(Entradas),ets=ETS(Entradas)) %>%
+  forecast(h=5)
+
+autoplot(Visitantes2,level=NULL) 
+
+
+
+
+
+
+# ############### Predictions using time series
+# 
+# Visitantes2 <- ts(Visitantes1[,"Entradas"],start=c(2012,1),frequency=12)
+# 
+# Visitantes3 <- ts(Visitantes1[,"Entradas"],start=c(2012,1),end=2019,frequency=12)
+# 
+# #Try to graph the data
+# autoplot(Visitantes2) +
+#   ggtitle("Visitantes Hombres de África") +
+#   ylab("Entradas")
+# 
+# autoplot(Visitantes3) +
+#   ggtitle("Visitantes Hombres de África") +
+#   ylab("Entradas")
+# 
+# #Build our Model
+# 
+# fit_Arima <- auto.arima(Visitantes2,seasonal=T)
+# summary(fit_Arima)
+# checkresiduals(fit_Arima)
+# 
+# fit_Arima <- auto.arima(Visitantes3,seasonal=T)
+# summary(fit_Arima)
+# checkresiduals(fit_Arima)
+# 
+# 
+# #forecast
+# fcast <- forecast(fit_Arima,h=5)
+# autoplot(fcast)
+# 
+# 
+# Visitantes4 <- Visitantes1 %>% model(arima=ARIMA(Entradas),ets=ETS(Entradas)) %>% forecast(h=10)
+# 
+# autoplot(Visitantes4,level=NULL) 
+
+
+```
+
+
+
 
 
 
