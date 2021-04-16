@@ -126,7 +126,8 @@ Visitantes <- Visitantes %>% group_by(Regiones,Sexo) %>% summarise(Entradas=sum(
 p5 <- Visitantes %>%
   ggplot(aes(x=Periodo,y=Entradas)) +
   geom_line(aes(color=Sexo)) +
-  facet_grid(Regiones~Sexo,scales = "free")
+  facet_grid(Regiones~Sexo,scales = "free") +
+  theme(legend.position = "none")
 
 p5
 ```
@@ -149,7 +150,7 @@ Visitantes2 <- Visitantes1 %>%
   model(arima=ARIMA(Entradas),ets=ETS(Entradas)) %>%
   forecast(h=5)
 
-autoplot(Visitantes2,level=NULL) 
+Visitantes2 %>% autoplot(Visitantes1,level=NULL) 
 
 ```
 
