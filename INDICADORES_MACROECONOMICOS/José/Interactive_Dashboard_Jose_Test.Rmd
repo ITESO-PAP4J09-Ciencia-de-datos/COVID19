@@ -90,8 +90,17 @@ PIB_Anim <- PIB_Anim %>%
 Visitantes<- read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "Visitantes")
 colnames(Visitantes) <-  c("Year","Mes","Aeropuerto","Nacionalidad","Regiones","Sexo","Entradas")
 
+
+Visitantes <- Visitantes %>% filter(Aeropuerto=="Acapulco, Gro."|
+                        Aeropuerto== "Aguascalientes, Ags."|
+                        Aeropuerto== "Cancún, Q. Roo"|
+                        Aeropuerto=="Ciudad de México (AICM)"|
+                        Aeropuerto=="Guadalajara, Jal.")
+
+
+
 Visitantes <- Visitantes %>% 
-  slice_sample(n = 500) %>% 
+  #slice_sample(n = 500) %>% 
   mutate(
     Mes = str_trunc(Mes, side = "right", width = 3, ellipsis = ""),
     Mes = case_when(
@@ -365,12 +374,32 @@ Detalles Visitantes
 ========================================
 
 ```{r}
-datatable(Visitantes %>%
-            group_by(Year,Mes,Aeropuerto),
-          caption = "Tabla de Visitantes",
-          rownames = T,
-          filter = "top",
-          options = list(pageLength = 25))
+p5 <- Visitantes %>% 
+  ggplot(aes(x=Periodo,y=Entradas)) +
+  geom_line(aes(color=Regiones)) +
+  facet_grid(Regiones~.,scales = "free")
+
+p5
+  
+
+```
+
+
+
+
+
+
+
+Detalles Visitantes
+========================================
+
+```{r}
+#datatable(Visitantes %>%
+ #           group_by(Periodo,Aeropuerto),
+  #        caption = "Tabla de Visitantes",
+   #       rownames = T,
+    #      filter = "top",
+     #     options = list(pageLength = 25))
 ```
 
 
