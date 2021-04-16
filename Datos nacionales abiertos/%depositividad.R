@@ -32,13 +32,13 @@ library(scales) # needed for comma
 
 #Datosmex2502 <- read_csv("210225COVID19MEXICO.csv")
 # Descarga de datos desde la página web
-fecha <- "210414"
-options(timeout = 600)
+# fecha <- "210414"
+options(timeout = 700)
 temp <- tempfile()
 download.file("http://datosabiertos.salud.gob.mx/gobmx/salud/datos_abiertos/datos_abiertos_covid19.zip", temp)
 
 
-Datosmex2502 <- vroom::vroom(unz(temp, paste0(fecha,"COVID19MEXICO.csv")))
+Datosmex2502 <- vroom::vroom(unz(temp, unzip(temp, list = TRUE) %>% pull(Name)))
 unlink(temp)
 
 
