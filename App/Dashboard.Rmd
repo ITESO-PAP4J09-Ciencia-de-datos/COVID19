@@ -10,7 +10,7 @@ output:
 
 ```{r setup, include=FALSE}
 library(flexdashboard)
-library(knitr)
+# library(knitr)
 library(DT)
 library(rpivotTable)
 library(ggplot2)
@@ -64,7 +64,7 @@ library(jsonlite)
 
 data <- read_csv("VehicleFailure.csv")
   
-delitos <- read_csv("delitos2015-2021.csv", 
+delitos <- read_csv("../Delitos/delitos2015-2021.csv", 
                     locale(encoding = "latin1"),
                     col_names = TRUE, 
                     col_types = NULL
@@ -309,21 +309,22 @@ Map
 #                            joinBy = c("woename", "State")) %>%
 
 #          hc_mapNavigation(enabled = T)
-
-fecha <- "210414"
+# lubridate::today()-1
+# fecha <- "210415"
 options(timeout = 700)
 temp <- tempfile()
 download.file("http://datosabiertos.salud.gob.mx/gobmx/salud/datos_abiertos/datos_abiertos_covid19.zip", temp)
 
 
-Datosmex2502 <- vroom::vroom(unz(temp, paste0(fecha,"COVID19MEXICO.csv")))
+Datosmex2502 <- vroom::vroom(unz(temp, unzip(temp, list = TRUE) %>% pull(Name)))
 unlink(temp)
 
 ```
 
+
 ```{r}
 
-Entidades <- read_xlsx("C:/Users/Usuario/Desktop/pap1_cienciadatos_pmv2021/Pruebas/Prueba_Dashboard/201128 Catalogos.xlsx",sheet="Catálogo de ENTIDADES")
+Entidades <- read_xlsx("../Datos nacionales abiertos/201128 Catalogos.xlsx",sheet="Catálogo de ENTIDADES")
 
 # Clasificación de datos  -------------------------------------------------
 
