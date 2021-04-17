@@ -1,6 +1,6 @@
 ---
 title: "PAP presentation"
-output: powerpoint_presentation
+output: powerpoint_presentación
  #  reference_doc: template.pptx
 ---
 
@@ -57,11 +57,8 @@ PIB_Test <- PIB1 %>%
 mycolors <- c("blue", "#FFC125", "darkgreen", "darkorange")
 ```
 
-## Gráfica PIB
 
-![Gráfica PIB](figs/GIF_TEST2.gif)
-
-## Gráfica de PIB
+## Gráfica de PIB Estados más significativos
 
 ```{r}
 p1 <- PIB_Test %>% group_by(Estado) %>% 
@@ -78,6 +75,24 @@ p1 <- PIB_Test %>% group_by(Estado) %>%
   #transition_reveal(PIB1)
 p1
 ```
+
+
+## Ejemplo predicción con modelo ARIMA
+
+```{r}
+PIB_Arim <- PIB_Test %>% group_by(Estado) %>% 
+  summarize(PIB1=sum(PIB)) %>% 
+  filter(Estado=="Ciudad de México")
+
+PIB_Arim2 <- PIB_Arim %>%
+  model(arima=ARIMA(PIB1)) %>%
+  forecast(h=2)
+
+PIB_Arim2 %>% 
+  autoplot(PIB_Arim) + 
+  ggtitle("Predicción sobre PIB en ciudad de México")
+```
+
 
 ## Visitantes
 
@@ -122,38 +137,18 @@ Visitantes <- Visitantes %>%
 ```
 
 ```{r}
-Visitantes <- Visitantes %>% group_by(Regiones,Sexo) %>% summarise(Entradas=sum(Entradas))
-p5 <- Visitantes %>%
+Visitantesx <- Visitantes %>%
+  group_by(Regiones,Sexo) %>%
+  summarise(Entradas=sum(Entradas)) %>% 
+  filter(Regiones!="Apátrida")
+p5 <- Visitantesx %>%
   ggplot(aes(x=Periodo,y=Entradas)) +
-  geom_line(aes(color=Sexo)) +
-  facet_grid(Regiones~Sexo,scales = "free") +
-  theme(legend.position = "none")
-
+  geom_line(aes(color=Regiones)) +
+  #facet_grid(.~Sexo,scales = "free") +
+  scale_y_log10()
+  
 p5
 ```
-
-## Comportamiento de visitantes 
-
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE,fig.dim=c(10,8)}
-Visitantes1 <- Visitantes %>% filter(Sexo=="Hombre"& Regiones=="África")
-autoplot(Visitantes1)
-```
-
-## Predicción
-```{r}
-
-Visitantes1 <- Visitantes %>% filter(Sexo=="Hombre"& Regiones=="África")
-
-############ Predictions using tsibbles
-Visitantes2 <- Visitantes1 %>%
-  model(arima=ARIMA(Entradas),ets=ETS(Entradas)) %>%
-  forecast(h=5)
-
-Visitantes2 %>% autoplot(Visitantes1,level=NULL) 
-
-```
-
 
 
 ## INPC

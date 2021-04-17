@@ -33,6 +33,8 @@ library(stringr)
 library(readr)
 library(zoo)
 library(forecast)
+# library(shiny)
+# library(shinydashboard)
 #library(multidplyr)
 #library(rvest) 
 #library(quantmod) 
@@ -56,31 +58,9 @@ PIB_Anim <- PIB_Anim %>%
   group_by(Year,Estado) %>% 
   summarise(PIB=sum(PIB)) %>% 
   arrange(Year,desc(PIB)) %>% 
+  mutate(PIB_round = sprintf("%.2f", PIB / 1000000)) %>% 
   mutate(ranking = row_number()) %>% 
   filter(ranking<=15)
-
-
-
-#PIB_Test1 <- PIB_Test %>% filter(Estado=="Ciudad de México")
-# modelo<-auto.arima(PIB_Test1[,5])
-# pronostico<- forecast(modelo,h=40)
-# plot(pronostico, main="Pronóstico con auto.arima",
-# ylab="PIB ciudad de México")
-
-
-
-# Ari <- PIB_Test %>% filter(Estado=="Ciudad de México") %>%  model(ARIMA(PIB)) 
-# 
-# PIB_Test %>% filter(Estado=="Ciudad de México") %>% autoplot(PIB)
-# 
-# 
-# tsibbledata::gafa_stock %>%
-#  autoplot(vars(Close, log(Close)))
-# 
-# 
-# 
-# autoplot(forecast(modelo))
-
 
 ```
 
@@ -91,11 +71,8 @@ Visitantes<- read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "Visit
 colnames(Visitantes) <-  c("Year","Mes","Aeropuerto","Nacionalidad","Regiones","Sexo","Entradas")
 
 
-Visitantes <- Visitantes %>% filter(Aeropuerto=="Acapulco, Gro."|
-                        Aeropuerto== "Aguascalientes, Ags."|
-                        Aeropuerto== "Cancún, Q. Roo"|
-                        Aeropuerto=="Ciudad de México (AICM)"|
-                        Aeropuerto=="Guadalajara, Jal.")
+Visitantes <- Visitantes %>% filter(Aeropuerto=="Guadalajara, Jal."|
+                          Aeropuerto=="Puerto Vallarta, Jal.")
 
 
 
@@ -284,10 +261,6 @@ datatable(PIB_Table,
 ```
 
 
-
-
-##Gráfica PIB Animada
-##=====================================
 ```{r}
 # p4 <- PIB_Test %>% group_by(Estado) %>% 
 #   summarize(PIB1=sum(PIB)) %>% 
@@ -306,9 +279,10 @@ Gráfica PIB Animada
 ```{r}
 # animacion <- PIB_Anim %>%
 #   ggplot() +
+#   ylab("PIB millones") +
 #   geom_col(aes(ranking, PIB, fill = Estado)) +
-#   geom_text(aes(ranking, PIB, label = PIB), hjust=-0.1) +
-#   geom_text(aes(ranking, y=0 , label = PIB), hjust=1.1) +
+#   geom_text(aes(ranking, PIB, label = PIB_round), hjust=-0.1) +
+#   geom_text(aes(ranking, y=0 , label = Estado), hjust=1.1) +
 #   geom_text(aes(x=15, y=max(PIB) , label = as.factor(Year)), vjust = 0.2, alpha = 0.5,  col = "gray", size = 20) +
 #   coord_flip(clip = "off", expand = FALSE) + scale_x_reverse() +
 #   theme_minimal() + theme(
@@ -319,14 +293,16 @@ Gráfica PIB Animada
 #     axis.text.y = element_blank(),
 #     plot.margin = margin(1, 4, 1, 3, "cm")
 #   ) +
-#   transition_states(Year, state_length = 0, transition_length = 2) +
+#   transition_states(Year, state_length = 0, transition_length = 15) +
 #   enter_fade() +
 #   exit_fade() +
 #   ease_aes('quadratic-in-out')
 # 
-# anim_save("figs/GIF_TEST2.gif",animate(animacion, width = 700, height = 432, fps = 25, duration = 15, rewind = FALSE))
+# animacion
+# 
+# anim_save("../José/figs/GIF_TEST3.gif",animate(animacion, width = 700, height = 432, fps = 25, duration = 15, rewind = FALSE))
 ```
-![Prueba de gráfica Animada](figs/GIF_TEST2.gif)
+![Prueba de gráfica Animada](figs/GIF_TEST3.gif)
 
 
 
@@ -350,26 +326,35 @@ Visitantes
 
 ### Gráficas
 ```{r}
-Visitantes <- Visitantes %>% group_by(Regiones,Sexo) %>% summarise(Entradas=sum(Entradas))
-Visitantesx <- Visitantes %>% filter (Sexo=="Hombre")
+Visitantesx <- Visitantes %>%
+  group_by(Regiones,Sexo) %>%
+  summarise(Entradas=sum(Entradas)) %>% 
+  filter(Regiones!="Apátrida")
 p5 <- Visitantesx %>%
   ggplot(aes(x=Periodo,y=Entradas)) +
-  geom_line(aes(color=Sexo)) +
-  facet_grid(Regiones~Sexo,scales = "free")
-
+  geom_line(aes(color=Regiones)) +
+  #facet_grid(.~Sexo,scales = "free") +
+  scale_y_log10()
+  
 p5
 ```
 
 ### Gráficas
 ```{r}
-Visitantes <- Visitantes %>% group_by(Regiones,Sexo) %>% summarise(Entradas=sum(Entradas))
-Visitantesx <- Visitantes %>% filter (Sexo=="Mujer")
-p5 <- Visitantesx %>%
-  ggplot(aes(x=Periodo,y=Entradas)) +
-  geom_line(aes(color=Sexo)) +
-  facet_grid(Regiones~Sexo,scales = "free")
-
-p5
+p6 <- Visitantes %>%
+  plot_ly(labels = ~Aeropuerto,
+          values = ~Entradas,
+          marker = list(colors = mycolors)) %>%
+  add_pie(hole = 0.2) %>%
+  layout(xaxis = list(zeroline = F,
+                      showline = F,
+                      showticklabels = F,
+                      showgrid = F),
+         yaxis = list(zeroline = F,
+                      showline = F,
+                      showticklabels=F,
+                      showgrid=F))
+p6
 ```
 
 
@@ -379,21 +364,28 @@ Predicciones
 
 ### Gráfica
 ```{r}
-Visitantes1 <- Visitantes %>% filter(Sexo=="Hombre"&Regiones=="África")
-autoplot(Visitantes1) + ylab("Entradas") + ggtitle("Visitantes Hombres de Africa")
-```
+Visitantes1 <- Visitantesx %>% filter(Sexo=="Hombre"&Regiones=="África")
+#autoplot(Visitantes1) + ylab("Entradas") + ggtitle("Visitantes Hombres de Africa")
 
-
-### Predicciones 
-
-
-```{r}
-############ Predictions using tsibbles
 Visitantes2 <- Visitantes1 %>%
   model(arima=ARIMA(Entradas),ets=ETS(Entradas)) %>%
   forecast(h=5)
 
-autoplot(Visitantes2,level=NULL) 
+Visitantes2 %>% 
+  autoplot(Visitantes1,level=NULL) + 
+  ggtitle("Visitantes provenientes de Africa")
+```
+
+
+
+
+```{r}
+############ Predictions using tsibbles
+# Visitantes2 <- Visitantes1 %>%
+#   model(arima=ARIMA(Entradas),ets=ETS(Entradas)) %>%
+#   forecast(h=5)
+# 
+# autoplot(Visitantes2,level=NULL) 
 
 
 
@@ -439,8 +431,15 @@ autoplot(Visitantes2,level=NULL)
 ```
 
 
+Detalles Visitantes 
+========================================
 
-
-
+```{r}
+datatable(Visitantes,
+          caption = "Tabla de Visitantes",
+          rownames = T,
+          filter = "top",
+          options = list(pageLength = 25))
+```
 
 

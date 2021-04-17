@@ -2,7 +2,7 @@ library(readxl)
 library(tidyverse)
 library(tsibble)
 library(feasts)
-
+install.packages("easypackages")
 
 install.packages("devtools")
 devtools::install_github("hadley/multidplyr")
