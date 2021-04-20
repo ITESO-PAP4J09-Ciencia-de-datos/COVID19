@@ -80,6 +80,40 @@ filtroPrueba <- FiltImpoData %>%
   drop_na(`ENTIDAD_FEDERATIVA`, `FECHA_INGRESO`) #borrar datos NA (no afecta)
   
 
+
+# Indicadores por dia -----------------------------------------------------
+
+positivosXEstaXDia <- confirm %>% 
+  dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
+  mutate(POSITIVOS=n()) %>%
+  distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
+  arrange(`FECHA_INGRESO`) %>% 
+  select(`FECHA_INGRESO`,
+         `ENTIDAD_RES`,
+         `ENTIDAD_FEDERATIVA`,
+         `FECHA_DEF`,
+         `POSITIVOS`,
+  )
+
+positivosXEstaXDia %>% 
+  group_by(ENTIDAD_FEDERATIVA) %>% 
+  slice_tail(n = 14) %>% 
+  summarise(Promedio = mean(POSITIVOS))
+
+positivos_tsbl <- positivosXEstaXDia %>% 
+  ungroup() %>% 
+  as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
+  mutate(
+    `14-MA` = slider::slide_dbl(POSITIVOS, mean,
+                               .before = 14, .complete = TRUE)
+  )
+
+positivos_tsbl %>% 
+  feasts::autoplot(POSITIVOS) +
+  geom_line(aes(y = `14-MA`), color = "black") +
+  facet_wrap(~ ENTIDAD_FEDERATIVA, scales = "free_y") + 
+  theme(legend.position = "none")
+
 # Indicadores por día en cada estado  -------------------------------------
 
 #Por día hacemos un conteo de los casos que se confirmaron en cada estado
