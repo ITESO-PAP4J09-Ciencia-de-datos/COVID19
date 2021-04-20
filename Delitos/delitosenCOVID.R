@@ -4,7 +4,7 @@ library(kableExtra)
 library(tsibble)
 
 ####Importación de datos####
-delitos <- read_csv("delitos2015-2021.csv",
+delitos <- read_csv("Delitos/delitos2015-2021.csv",
                     locale(encoding = "latin1"),
                     col_names = TRUE, 
                     col_types = NULL
@@ -91,7 +91,24 @@ delitos_violencia_familiar_gg <- delitos_tidy_tsbl %>%
 
 #Tabla de incidencia
 
-Incidencia_2019 <-delitos_tidy_tsbl %>% 
+incidencias <- delitos_tidy_tsbl %>% 
+  group_by_key() %>% 
+  index_by(Año = year(Fecha)) %>% 
+  summarise(Cuenta = sum(Cuenta)) %>% 
+  as_tibble(incidencias) %>% 
+  mutate(cambio = (Cuenta / lag(Cuenta) - 1) * 100) %>% 
+  filter(Año != 2021)
+
+incidencias %>% 
+  ggplot(aes(x = Año, y = Cuenta, color = Tipo_de_delito)) +
+  geom_line(size = 1)+
+  facet_wrap(~ Tipo_de_delito, scales = "free_y") +
+  theme(legend.position = "none")
+
+incidencias %>% 
+  pivot_wider(names_from = Año, values_from = Cuenta:cambio)
+
+Incidencia_2019 <- delitos_tidy_tsbl %>% 
   group_by_key() %>% 
   index_by(Año = year(Fecha)) %>% 
   summarise(Cuenta = sum(Cuenta)) %>% 
