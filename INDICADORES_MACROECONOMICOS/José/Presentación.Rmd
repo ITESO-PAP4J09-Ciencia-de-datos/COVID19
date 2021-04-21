@@ -1,6 +1,6 @@
 ---
-title: "PAP presentation"
-output: powerpoint_presentación
+title: "Presentación PAP"
+output: powerpoint_presentation
  #  reference_doc: template.pptx
 ---
 
@@ -149,38 +149,6 @@ p5 <- Visitantesx %>%
   
 p5
 ```
-
-
-## INPC
-
-Vamos a analizar el INPC (Indice Nacional de Precios al Consumidor).
-Primero hay que definir que es el índice de precios al consumidor o índice de precios de consumo(comúnmente llamado por su sigla IPC) ; es un índice económico en el que se valoran los precios de un determinado conjunto de bienes y servicios.
-
-
-
-## Gráficas INPC
-
-```{r, include=FALSE, warning=FALSE, echo=FALSE}
-INPC <- read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "INPC")
-INPCJ <- INPC[INPC$`Nombre entidad` == "Jalisco",]
-INPCJ <- select(INPCJ, -"Clave entidad", -"Nombre entidad")
-```
-
-```{r, include=FALSE, warning=FALSE}
-INPCJ <- INPCJ %>%
-mutate(Month = yearmonth(Fecha)) %>%
-select(-Fecha) %>%
-as_tsibble(key = c(`Objeto de gasto`),
-index = Month) #%>%
-#mutate(diff_INPCJ = difference(Índice))
-
-```
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE,fig.dim=c(10,8)}
-autoplot(INPCJ)
-```
-
-
 
 
 ## IED

@@ -192,7 +192,7 @@ p1 <- PIB_Test %>% group_by(Estado) %>%
            Estado=="Guanajuato") %>% 
   ggplot(aes(x=Year,y=PIB1),size=2) +
   geom_line(aes(color=Estado)) +
-  scale_y_log10() #+ 
+  scale_y_log10() + ylab("PIB") + xlab("Fecha")#+ 
   #transition_reveal(PIB1)
 p1
 ```
@@ -216,7 +216,7 @@ p2 <- PIB_Test %>% filter(Year==2018) %>%
                       showline = F,
                       showticklabels=F,
                       showgrid=F))
-p2
+p2 
 ```
 
 ### PIB por tipo de actividad
