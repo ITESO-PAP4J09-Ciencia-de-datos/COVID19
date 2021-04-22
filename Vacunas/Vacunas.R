@@ -66,7 +66,9 @@ Vacunas_latam_tsibble <- Vacunastotales_tsibble %>%
   filter(location %in% latam)
 
 
-# Visualización -----------------------------------------------------------
+
+
+### Visualización -----------------------------------------------------------
 # Visualización general ---------------------------------------------------
 
 
@@ -86,7 +88,7 @@ plotly::ggplotly(EscenarioLatam)
 
 
 
-# #Visualización por periocidad -------------------------------------------
+# #Visualización por periocidad (estacionalidad) -------------------------------------------
 
 #Utilizando la función gg_season para hacer graficas
 #de la vacunación (2 gráficas por pais correspondiente a los
@@ -161,53 +163,79 @@ wrap_plots(A = EscenarioLatam,
            design = layout)
 
 
-# Definición del modelo ---------------------------------------------------
 
+
+
+### Pronósticos y modelaje  -------------------------------------------------
+
+
+# Modelo TSLM -------------------------------------------------------------
+#https://www.rdocumentation.org/packages/forecast/versions/8.14/topics/tslm
+
+#Descripción
+#Fit a linear model with time series components
+#tslm is used to fit linear models to time series including trend and seasonality components.
+
+
+# Definición del modelo 
 
 TSLM(total_vaccinations_per_hundred ~ trend())
 
 
-# Entrenamiento del modelo (Estimación) -----------------------------------
+# Entrenamiento del modelo (Estimación) 
 
-fit <- Vacunas_latam_tsibble %>%
+fit_TSLM <- Vacunas_latam_tsibble %>%
   model(Modelo_tendencia = 
           TSLM(total_vaccinations_per_hundred ~ trend()))
-fit
+fit_TSLM
+
+# Revisar el desempeño del modelo (evaluación) 
 
 
-# Revisar el desempeño del modelo (evaluación) ----------------------------
-
-
-# Producir pronósticos ----------------------------------------------------
+# Producir pronósticos 
 
 #Se genera la tabla de pronósticos, el cual va ser
 #una tabla de tipo fable (objeto) es decir
 #forecasting table
-fcst <- fit %>% forecast(h = 3) #se hace para los siguientes 3 meses
+fcst_TSLM <- fit_TSLM %>% forecast(h = 3) #se hace para los siguientes 3 meses
                                 #pues los datos que se tienen hasta el momento
                                 # son de 4 - 5 meses
-fcst
+fcst_TSLM
 
 # Visualización de la forecasting table
 
 #para grupo 1 latama
 
-fcst %>%
+fcst_TSLM %>%
   filter(location %in% latam1) %>%
   autoplot(Vacunas_latam_tsibble) +
   ggtitle('Vacunas en LATAM') + 
-  ylab('Vacunas aplicadas por cada 100') -> fcst1
+  ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_g1
 
 #para grupo 2 latam
 
-fcst %>%
+fcst_TSLM %>%
   filter(location %in% latam2) %>%
   autoplot(Vacunas_latam_tsibble) +
   ggtitle('Vacunas en LATAM') + 
-  ylab('Vacunas aplicadas por cada 100') -> fcst2
+  ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_g2
 
 #integración de las visualizaciones
 
-fcst3 = fcst1 + fcst2 
-fcst3
+fcst_TSLM_g3 = fcst_TSLM_g1 + fcst_TSLM_g2 
+fcst_TSLM_g3
 
+
+
+# Modelo suavización exponencial con tendencia ----------------------------
+#https://www.rdocumentation.org/packages/forecast/versions/8.14/topics/ets
+
+#ETS = Exponential smoothing state space model
+
+#Description
+# Returns ETS model applied to "y"
+
+fit_ETS <- Vacunas_latam_tsibble %>%
+  model(
+    
+  )
