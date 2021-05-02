@@ -363,5 +363,4 @@ fit_ETS_trendDamped %>%
 #        y = 'Vacunas aplicadas por cada 100')
 
 # Modelo ARIMA ------------------------------------------------------------
-
-
+e
