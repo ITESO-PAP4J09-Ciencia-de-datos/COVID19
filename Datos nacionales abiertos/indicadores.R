@@ -17,7 +17,7 @@ library(dplyr)
 
 #Tablas
 # library(data.table)
-# library(formattable)
+ library(formattable)
 # library(tables)
 library(mxmaps) #datos de méxico, INEGI y ubicación para mapa
 
@@ -395,18 +395,30 @@ summary(PromIndica)
 
 # Normalización  ----------------------------------------------------------
 
-library(caret)
-
-
-preproc2 <- preProcess(PromIndica[,c(1:3)], method=c("range"))
-
-norm2 <- predict(preproc2, PromIndica[,c(1:3)])
-
-summary(norm2)
+# library(caret)
+# 
+# 
+# preproc2 <- preProcess(PromIndica[,c(1:3)], method=c("range"))
+# 
+# norm2 <- predict(preproc2, PromIndica[,c(1:3)])
+# 
+# summary(norm2)
 
 
 normalize <- function(x) {
   return (((x - min(x))*(100) / (max(x) - min(x))))
 }
 PromIndica$PROM_NORM <- normalize(PromIndica$PROM)
+
+
+# Tabla Calificación  -----------------------------------------------------
+
+#Tabla que muestra el número de pruebas que se hacen por día en los estados
+formattable(PromIndica, #llamo datos
+            align =c("l","c"), #Para alinear los datos de la tabla cada "" es una columna
+            list(`ENTIDAD_FEDERATIVA` = formatter( #datos específicos
+              "span", style = ~ style(color = "grey",font.weight = "bold")),
+              `AVERAGE` = color_bar("Red") # me crea una barra roja con proporción a los datos
+            )
+)
 
