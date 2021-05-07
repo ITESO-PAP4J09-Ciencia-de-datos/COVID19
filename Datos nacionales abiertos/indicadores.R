@@ -139,7 +139,7 @@ muertesXEstaXDia %>%
   summarise(Promedio = mean(MUERTES))
 
 #media movil de 14 días
-positivos_tsbl <- muertesXEstaXDia %>% 
+muertes_tsbl <- muertesXEstaXDia %>% 
   ungroup() %>% 
   as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
   mutate(
@@ -156,16 +156,92 @@ muertes_tsbl %>%
 
 # medias movil positivos por millon de habitantes -------------------------
 
+positivosXEstaXDiaXmillon <- positivosXEstaXDia %>% 
+  left_join(poblacionEstado, by=c("ENTIDAD_RES"="region"))
+positivosXEstaXDiaXmillon$POSITIVOS <- (positivosXEstaXDiaXmillon$POSITIVOS*1000000)/positivosXEstaXDiaXmillon$pop
+  
+#media movil de 14 días
+positivosmillon_tsbl <- positivosXEstaXDiaXmillon %>% 
+  ungroup() %>% 
+  as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
+  mutate(
+    `14-MA` = slider::slide_dbl(POSITIVOS, mean,
+                                .before = 14, .complete = TRUE)
+  )
 
+# media movil muertes por millon de habitantes ----------------------------
+
+muertesXEstaXDiaXmillon <- muertesXEstaXDia %>% 
+  left_join(poblacionEstado, by=c("ENTIDAD_RES"="region"))
+muertesXEstaXDiaXmillon$MUERTES <- (muertesXEstaXDiaXmillon$MUERTES*1000000)/muertesXEstaXDiaXmillon$pop
+
+#media movil de 14 días
+muertesmillon_tsbl <- muertesXEstaXDiaXmillon %>% 
+  ungroup() %>% 
+  as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
+  mutate(
+    `14-MA` = slider::slide_dbl(MUERTES, mean,
+                                .before = 14, .complete = TRUE)
+  )
+
+
+# media movil de la positividad -------------------------------------------
+PruePosiXEstaXDia <- filtroPrueba %>% 
+    dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
+    mutate(PRUEBAS=n()) %>%
+    distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
+    arrange(`FECHA_INGRESO`) %>%
+    select(`FECHA_INGRESO`,
+           `ENTIDAD_RES`,
+           `ENTIDAD_FEDERATIVA`,
+           `FECHA_DEF`,
+           `PRUEBAS`) %>% 
+   left_join(positivosXEstaXDia, positivosXEstaXDia, by= c("ENTIDAD_RES", "FECHA_INGRESO", "ENTIDAD_FEDERATIVA"))
+
+PruePosiXEstaXDia$POSITIVIDAD <- (PruePosiXEstaXDia$POSITIVOS/PruePosiXEstaXDia$PRUEBAS)*100
+
+#media movil de 14 días
+positivdad_tsbl <- PruePosiXEstaXDia %>% 
+  ungroup() %>% 
+  as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
+  mutate(
+    `14-MA` = slider::slide_dbl(POSITIVIDAD, mean,
+                                .before = 14, .complete = TRUE)
+  )
+
+# Media movil de pruebas por cada 1000 habitantes --------------------------
+
+pruebasXEstaXDia<- filtroPrueba %>% 
+  dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
+  mutate(PRUEBAS=n()) %>%
+  distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
+  arrange(`FECHA_INGRESO`) %>%
+  select(`FECHA_INGRESO`,
+         `ENTIDAD_RES`,
+         `ENTIDAD_FEDERATIVA`,
+         `FECHA_DEF`,
+         `PRUEBAS`) %>% 
+  left_join(poblacionEstado, by=c("ENTIDAD_RES"="region"))
+
+pruebasXEstaXDia$XMILHAB <- ((1000*pruebasXEstaXDia$PRUEBAS)/pruebasXEstaXDia$pop)
+
+#media movil de 14 días
+pruebas_tsbl <- pruebasXEstaXDia %>% 
+  ungroup() %>% 
+  as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
+  mutate(
+    `14-MA` = slider::slide_dbl(XMILHAB, mean,
+                                .before = 14, .complete = TRUE)
+  ) 
 
 # Indicadores por día en cada estado  -------------------------------------
 
 # #Por día hacemos un conteo de los casos que se confirmaron en cada estado
-# positivosXEstaXDia <- confirm %>% 
+# positivosXEstaXDia <- confirm %>%
 #   dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
 #   mutate(POSITIVOS=n()) %>%
 #   distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
-#   arrange(`FECHA_INGRESO`) %>% 
+#   arrange(`FECHA_INGRESO`) %>%
 #   select(`FECHA_INGRESO`,
 #          `ENTIDAD_RES`,
 #          `ENTIDAD_FEDERATIVA`,
@@ -173,12 +249,12 @@ muertes_tsbl %>%
 #          `POSITIVOS`,
 #          )# %>%
 #   # add_column(SUMS=NA)
-#  
-# #Para generar las tablas de cada uno de los estados con su conteo 
+# 
+# #Para generar las tablas de cada uno de los estados con su conteo
 # for(i in unique(positivosXEstaXDia$`ENTIDAD_RES`)) {
 #   nam <- paste0("positivoE.", i )
 #   assign(nam, positivosXEstaXDia[positivosXEstaXDia$`ENTIDAD_RES`==i,])
-#   
+# 
 # }
 # 
 # muertesXEstaXDia <- muertesConfirm %>% 
@@ -195,38 +271,49 @@ muertes_tsbl %>%
 # for(i in unique(muertesXEstaXDia$`ENTIDAD_RES`)) {
 #   nam <- paste("muertesE", i, sep = ".")
 #   assign(nam, muertesXEstaXDia[muertesXEstaXDia$ENTIDAD_RES==i,])
-}
-pruebasXEstaXDia <- filtroPrueba %>% 
-  dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
-  mutate(PRUEBAS=n()) %>%
-  distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
-  arrange(`FECHA_INGRESO`) %>% 
-  select(`FECHA_INGRESO`,
-         `ENTIDAD_RES`,
-         `ENTIDAD_FEDERATIVA`,
-         `FECHA_DEF`,
-         `PRUEBAS`)
-for(i in unique(pruebasXEstaXDia$`ENTIDAD_RES`)) {
-  nam <- paste("pruebasE", i, sep = ".")
-  assign(nam, pruebasXEstaXDia[pruebasXEstaXDia$ENTIDAD_RES==i,]) 
-  # add_column(rollsumr("pruebasE".i$PRUEBAS, k = 14, fill = NA))
-  # pruebasE.i$promedio <- rollmean(`PRUEBAS`, k = 14, fill = NA, aling="rigth")
-}
-for (i in tibble("pruebasE", i,sep="·")){
-  tibble("pruebasE", i,sep="·")$sums <-rollsumr(PRUEBAS, k = 14, fill = NA) %>% 
-  tibble("pruebasE", i,sep="·")$promedio <- rollmean(PRUEBAS, k = 14, fill = NA, aling="rigth")
-}
-# Indicadores por estados -------------------------------------------------------------
+# }
+# pruebasXEstaXDia <- filtroPrueba %>% 
+#   dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
+#   mutate(PRUEBAS=n()) %>%
+#   distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
+#   arrange(`FECHA_INGRESO`) %>% 
+#   select(`FECHA_INGRESO`,
+#          `ENTIDAD_RES`,
+#          `ENTIDAD_FEDERATIVA`,
+#          `FECHA_DEF`,
+#          `PRUEBAS`)
+# for(i in unique(pruebasXEstaXDia$`ENTIDAD_RES`)) {
+#   nam <- paste("pruebasE", i, sep = ".")
+#   assign(nam, pruebasXEstaXDia[pruebasXEstaXDia$ENTIDAD_RES==i,]) 
+#   # add_column(rollsumr("pruebasE".i$PRUEBAS, k = 14, fill = NA))
+#   # pruebasE.i$promedio <- rollmean(`PRUEBAS`, k = 14, fill = NA, aling="rigth")
+# }
+# for (i in tibble("pruebasE", i,sep="·")){
+#   tibble("pruebasE", i,sep="·")$sums <-rollsumr(PRUEBAS, k = 14, fill = NA) %>% 
+#   tibble("pruebasE", i,sep="·")$promedio <- rollmean(PRUEBAS, k = 14, fill = NA, aling="rigth")
+# }
+# Promedio al día indicadores por estados -------------------------------------------------------------
 
 positivosXEstados <- confirm %>%
   group_by(`ENTIDAD_RES`) %>%
   mutate(Positivos=n()) %>%
   distinct(`ENTIDAD_RES`, .keep_all = TRUE) %>%
   arrange(`ENTIDAD_RES`) %>% 
-  dplyr::select(`ENTIDAD_RES`,
+  dplyr::select(
+                `ENTIDAD_RES`,
                 `ENTIDAD_FEDERATIVA`,
                 `ABREVIATURA`,
                 `Positivos`) 
+
+# #promedios positivos al día en cada estado
+# positivosXEstaXDia <- positivosXEstaXDia %>% 
+#   ungroup() %>% 
+#   group_by(`ENTIDAD_RES`) %>% 
+#   mutate(
+#     PROM=mean(POSITIVOS)
+#     
+#   ) 
+
 
 muertesXEstado <- muertesConfirm %>%
   group_by(`ENTIDAD_RES`) %>%
@@ -237,6 +324,16 @@ muertesXEstado <- muertesConfirm %>%
                 `ENTIDAD_FEDERATIVA`,
                 `ABREVIATURA`,
                 `Muertes`) 
+
+# #promedios de muertes al día en cada estado
+# muertesXEstaXDia <- muertesXEstaXDia %>% 
+#   ungroup() %>% 
+#   group_by(`ENTIDAD_RES`) %>% 
+#   mutate(
+#     PROM=mean(MUERTES)
+#     
+#   ) 
+
 
 pruebasXEstado <- filtroPrueba  %>%
   group_by(`ENTIDAD_RES`) %>%
@@ -263,7 +360,7 @@ muerteXEstaXMillon <- ((1000000*muertesXEstado$Muertes)/poblacionEstado$pop)
 PositividadIndica <- (positivosXEstados$Positivos/pruebasXEstado$Pruebas)*100
 # Pruebas por mil habitantes  ---------------------------------------------
 
-pruebasXEstaXMilhab <- ((100*pruebasXEstado$Pruebas)/poblacionEstado$pop)
+pruebasXEstaXMilhab <- ((1000*pruebasXEstado$Pruebas)/poblacionEstado$pop)
 
 
 # Tabla con datos finales xEstado -------------------------------------------------
@@ -276,4 +373,40 @@ indicadoresFinal <- positivosXEstados %>%
   add_column(PositividadIndica) %>% 
   add_column(pruebasXEstaXMilhab)
 
+indicadoresFinal <- indicadoresFinal %>% 
+  ungroup() %>% 
+  group_by(`ENTIDAD_FEDERATIVA`) %>% 
+  mutate(
+    SUM= sum(`Positivos`,
+             `muertesXEstado$Muertes`,
+             posiXEstaXMillon,
+             muerteXEstaXMillon,
+             PositividadIndica,
+             pruebasXEstaXMilhab,
+             na.rm = TRUE),
+    PROM = (SUM/6)
+      ) 
+
+PromIndica <- indicadoresFinal %>% 
+  dplyr::select(`ENTIDAD_RES`,
+                `ENTIDAD_FEDERATIVA`,
+                `PROM`)
+summary(PromIndica)
+
+# Normalización  ----------------------------------------------------------
+
+library(caret)
+
+
+preproc2 <- preProcess(PromIndica[,c(1:3)], method=c("range"))
+
+norm2 <- predict(preproc2, PromIndica[,c(1:3)])
+
+summary(norm2)
+
+
+normalize <- function(x) {
+  return (((x - min(x))*(100) / (max(x) - min(x))))
+}
+PromIndica$PROM_NORM <- normalize(PromIndica$PROM)
 
