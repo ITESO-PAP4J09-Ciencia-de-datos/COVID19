@@ -408,17 +408,29 @@ summary(PromIndica)
 normalize <- function(x) {
   return (((x - min(x))*(100) / (max(x) - min(x))))
 }
-PromIndica$PROM_NORM <- normalize(PromIndica$PROM)
+calificacion <- function(x) {
+  return (100-(((x - min(x))*(100) )/ (max(x) - min(x))))
+}
+PromIndica$NORM <- normalize(PromIndica$PROM)
+PromIndica$AVERAGE <- calificacion(PromIndica$PROM)
 
 
 # Tabla Calificación  -----------------------------------------------------
 
+calif <- PromIndica %>% 
+  dplyr::select(`ENTIDAD_FEDERATIVA`,
+                `AVERAGE`
+                ) %>% 
+  arrange(desc(AVERAGE))
+
+  colnames(calif)[colnames(calif)=="ENTIDAD_FEDERATIVA"] <- "ESTADO"
+
 #Tabla que muestra el número de pruebas que se hacen por día en los estados
-formattable(PromIndica, #llamo datos
+formattable(calif, #llamo datos
             align =c("l","c"), #Para alinear los datos de la tabla cada "" es una columna
-            list(`ENTIDAD_FEDERATIVA` = formatter( #datos específicos
+            list(`ESTADO` = formatter( #datos específicos
               "span", style = ~ style(color = "grey",font.weight = "bold")),
-              `AVERAGE` = color_bar("Red") # me crea una barra roja con proporción a los datos
+              `AVERAGE` = color_tile("transparent", "orange")# me crea una barra roja con proporción a los datos
             )
 )
 
