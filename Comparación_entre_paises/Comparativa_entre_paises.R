@@ -30,7 +30,7 @@ Comparativa_nuevos_casos <- nuevos_casos_mundiales %>%
 casos_por_millon <- read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/jhu/new_cases_per_million.csv")
 
 Comparativa_casos_latam <- casos_por_millon %>%
-  select(date, matches(latam)) %>%
+  dplyr::select(date, matches(latam)) %>%
   pivot_longer(
     cols = 'Mexico':'Dominican Republic',
     names_to = "Paises",
