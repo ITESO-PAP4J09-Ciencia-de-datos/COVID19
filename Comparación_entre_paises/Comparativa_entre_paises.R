@@ -49,7 +49,9 @@ GraphLatam <- Comparativa_casos_latam_tsbl %>%
   as_tsibble(
     index = date )%>%
   ggplot() +
-  geom_line(mapping = aes(x = date, y = Casos_por_millon, color = Paises))
+  geom_line(mapping = aes(x = date, y = Casos_por_millon, color = Paises)) +
+  facet_wrap(~ Paises, scales = "free_y") +
+  theme(legend.position = "none")
   
 
   
