@@ -66,8 +66,8 @@ library(jsonlite)
 
 
 ```{r}
-
-data <- read_csv("VehicleFailure.csv")
+# 
+# data <- read_csv("VehicleFailure.csv")
   
 delitos <- read_csv("../Delitos/delitos2015-2021.csv", 
                     locale(encoding = "latin1"),
@@ -113,8 +113,8 @@ delitos_tidy_tsbl <- delitos_tidy %>%
     index = Fecha,
     key   = c(Tipo_de_delito, Subtipo_de_delito)
   )
-
-mycolors <- c("blue", "#FFC125", "darkgreen", "darkorange")
+# 
+# mycolors <- c("blue", "#FFC125", "darkgreen", "darkorange")
 ```
 
 Delitos en época de COVID19
@@ -186,53 +186,110 @@ Row
 ```{r}
 
 
-#Tabla de incidencia
+#Tabla de incidencia (old)
+# 
+# Incidencia_2019 <-delitos_tidy_tsbl %>% 
+#   tsibble::group_by_key() %>% 
+#   tsibble::index_by(Año = year(Fecha)) %>% 
+#   dplyr::summarise(Cuenta = sum(Cuenta)) %>% 
+#   dplyr::filter(Año %in% 2019) %>%
+#   dplyr::as_tibble(Incidencia_2019) %>%
+#   dplyr::transmute( Delito = Tipo_de_delito, 
+#                     Incidencia_2019 = Cuenta) 
+# 
+# Incidencia_2020 <- delitos_tidy_tsbl %>%
+#   group_by_key() %>%
+#   
+#   index_by(Año = year(Fecha)) %>%
+#   
+#   dplyr::summarise(Cuenta = sum(Cuenta)) %>%
+#   dplyr::filter(Año %in% 2020) %>%
+#   dplyr::as_tibble(Incidencia_2020) %>%
+#   dplyr::mutate(Delito = Tipo_de_delito,
+#         Incidencia_2020 = Cuenta) %>%
+#   dplyr::select(Delito, Incidencia_2020)
+# 
+# Incidencia <- Incidencia_2020 %>%
+#   add_column(Incidencia_2019$Incidencia_2019) %>%
+#   dplyr::mutate(
+#     Porcentaje_de_cambio = round((
+#       (Incidencia_2020 - Incidencia_2019$Incidencia_2019)/Incidencia_2020), digits = 5),
+#     Incidencia_2019 = Incidencia_2019$Incidencia_2019) %>%
+#   
+#   dplyr::select(Delito, Incidencia_2019, Incidencia_2020, Porcentaje_de_cambio)%>%
+#   arrange(desc(Porcentaje_de_cambio)) 
+#  
+# Tabla <- Incidencia %>%
+#   mutate(Porcentaje_de_cambio =  percent(Porcentaje_de_cambio, 2)) %>%
+#   kbl(fortmat = "htlm", col.names = c("Delitos",
+#                                       "Incidencia en 2019",
+#                                       "Incidencia en 2020",
+#                                       "Porcentaje de cambio")) %>%
+#   
+#   kable_styling(bootstrap_options = "striped",
+#                 full_width = F,
+#                 position = "left",
+#                 font_size = 14) %>%
+#   
+#   column_spec(4,color = ifelse( Incidencia$Porcentaje_de_cambio > 0, "red", "green"))
+# Tabla
 
-Incidencia_2019 <-delitos_tidy_tsbl %>% 
-  tsibble::group_by_key() %>% 
-  tsibble::index_by(Año = year(Fecha)) %>% 
-  dplyr::summarise(Cuenta = sum(Cuenta)) %>% 
-  dplyr::filter(Año %in% 2019) %>%
-  dplyr::as_tibble(Incidencia_2019) %>%
-  dplyr::transmute( Delito = Tipo_de_delito, 
-                    Incidencia_2019 = Cuenta) 
 
-Incidencia_2020 <- delitos_tidy_tsbl %>%
-  group_by_key() %>%
-  
-  index_by(Año = year(Fecha)) %>%
-  
-  dplyr::summarise(Cuenta = sum(Cuenta)) %>%
-  dplyr::filter(Año %in% 2020) %>%
-  dplyr::as_tibble(Incidencia_2020) %>%
-  dplyr::mutate(Delito = Tipo_de_delito,
-        Incidencia_2020 = Cuenta) %>%
-  dplyr::select(Delito, Incidencia_2020)
+#Tabla de incidencia (new -> 13/marzo/2021)
 
-Incidencia <- Incidencia_2020 %>%
-  add_column(Incidencia_2019$Incidencia_2019) %>%
-  dplyr::mutate(
-    Porcentaje_de_cambio = round((
-      (Incidencia_2020 - Incidencia_2019$Incidencia_2019)/Incidencia_2020), digits = 5),
-    Incidencia_2019 = Incidencia_2019$Incidencia_2019) %>%
-  
-  dplyr::select(Delito, Incidencia_2019, Incidencia_2020, Porcentaje_de_cambio)%>%
-  arrange(desc(Porcentaje_de_cambio)) 
+incidencias <- delitos_tidy_tsbl %>% 
+  group_by_key() %>% 
+  index_by(Año = year(Fecha)) %>% 
+  summarise(Cuenta = sum(Cuenta)) %>% 
+  as_tibble(incidencias) %>% 
+  mutate(cambio = (Cuenta / lag(Cuenta) - 1)*100) %>% 
+  filter(Año != 2021)
+
+Todos_delitos_gg <- incidencias %>% 
+  ggplot(aes(x = Año, y = Cuenta, color = Tipo_de_delito)) +
+  geom_line(size = 1)+
+  facet_wrap(~ Tipo_de_delito, scales = "free_y") +
+  theme(legend.position = "none")
+
+# perc_cambio_incidencias <- incidencias %>%
+#   ggplot(aes(x = Año, y = cambio, color = Subtipo_de_delito)) +
+#   geom_line() +
+#   geom_line(size = 1)+
+#   facet_wrap(~ Subtipo_de_delito, scales = "free_y") +
+#   theme(legend.position = "none")
+# plotly::ggplotly(perc_cambio_incidencias)
+
+incidencias <- incidencias %>% 
+  pivot_wider(names_from = Año, values_from = Cuenta:cambio)
+
+Tabla <- incidencias %>%
+  dplyr::select( Subtipo_de_delito, Cuenta_2019, Cuenta_2020, cambio_2020) %>%
+  arrange(-cambio_2020) %>%
+  transmute('Tipo de delito' = Subtipo_de_delito,
+            'Incidencia en 2019' = Cuenta_2019,
+            'Incidencia en 2020' = Cuenta_2020,
+            'Porcentaje de cambio' =  round(cambio_2020, digits = 2))
+
+customGreen0 = "#DeF7E9"
+
+customGreen = "#71CA97"
+
+customRed = "#ff7f7f"
+
+cambio_format <- 
+  formatter("span", 
+            style = x ~ formattable::style(
+              font.weight = "bold",
+              color = ifelse(x < 0, customGreen, ifelse(x > 0, customRed, "black"))),
+            x ~ icontext(ifelse(x>0, "arrow-up", "arrow-down"), x)
+  ) 
+
+formattable(Tabla, 
+            align = c("l", rep("r", NCOL(Tabla) - 1)),
+            list('Tipo de delito' = formatter("span", style = ~ formattable::style(color = "grey", font.weight = "bold")),
+                 'Porcentaje de cambio' = cambio_format
+            ))
  
-Tabla <- Incidencia %>%
-  mutate(Porcentaje_de_cambio =  percent(Porcentaje_de_cambio, 2)) %>%
-  kbl(fortmat = "htlm", col.names = c("Delitos",
-                                      "Incidencia en 2019",
-                                      "Incidencia en 2020",
-                                      "Porcentaje de cambio")) %>%
-  
-  kable_styling(bootstrap_options = "striped",
-                full_width = F,
-                position = "left",
-                font_size = 14) %>%
-  
-  column_spec(4,color = ifelse( Incidencia$Porcentaje_de_cambio > 0, "red", "green"))
-Tabla
 
 
 ```
@@ -250,49 +307,91 @@ sexuales_y_genero = c("Abuso sexual",
                       "Hostigamiento sexual", 
                       "Otros delitos que atentan contra la libertad y la seguridad sexual")
 
-p2 <-  delitos_tidy_tsbl %>%
-  filter (Tipo_de_delito %in% sexuales_y_genero) %>%
-  ggplot() + 
-  geom_line(mapping = aes(x = Fecha, y = Cuenta, color = Tipo_de_delito))
+# Grafica old
+# p2 <-  delitos_tidy_tsbl %>%
+#   filter (Tipo_de_delito %in% sexuales_y_genero) %>%
+#   ggplot() + 
+#   geom_line(mapping = aes(x = Fecha, y = Cuenta, color = Tipo_de_delito))
+# 
+# p2
 
-p2
+delitos_sexuales_y_genero_gg <- delitos_tidy_tsbl %>%
+  filter (Tipo_de_delito %in% sexuales_y_genero) %>%
+  ggplot(aes(x = Fecha, y = Cuenta, color = Tipo_de_delito)) +
+  geom_line(size = 1)+
+  facet_wrap(~ Tipo_de_delito, scales = "free_y") +
+  theme(legend.position = "none")
+
+delitos_sexuales_y_genero_gg
+```
+
+```{r}
+#CargaDeDatos para generar gráficas de los delitos totales y en tasa de cambio
+
+incidencias <- delitos_tidy_tsbl %>% 
+  group_by_key() %>% 
+  index_by(Anual = year(Fecha)) %>% 
+  summarise(Cuenta = sum(Cuenta)) %>% 
+  as_tibble(incidencias) %>% 
+  mutate(cambio = (Cuenta / lag(Cuenta) - 1)*100) %>% 
+  filter(Anual != 2021)
 
 ```
 
-### Delitos contra la libertad
+
+### Todos los delitos
 
 ```{r}
-p3 <- delitos_tidy_tsbl %>%
-  filter (Tipo_de_delito %in% c("Trata de personas", "Tráfico de menores", "Secuestro") ) %>%
-  ggplot() + 
-  geom_line(mapping = aes(x = Fecha, y = Cuenta, color = Tipo_de_delito))
+#gráfica old, delitos contra la libertad
+# p3 <- delitos_tidy_tsbl %>%
+#   filter (Tipo_de_delito %in% c("Trata de personas", "Tráfico de menores", "Secuestro") ) %>%
+#   ggplot() + 
+#   geom_line(mapping = aes(x = Fecha, y = Cuenta, color = Tipo_de_delito))
+# 
+# p3
 
-p3
+Todos_delitos_gg <- incidencias %>% 
+  ggplot(aes(x = Anual, y = Cuenta, color = Tipo_de_delito)) +
+  geom_line(size = 1)+
+  facet_wrap(~ Tipo_de_delito, scales = "free_y") +
+  theme(legend.position = "none")
+
+Todos_delitos_gg
 ```
 
 Row
 ------------------------------------
-### Delitos dolosos 
+### Cambio en la incidencia  
 
 ```{r}
-p4 <- delitos_tidy_tsbl %>%
-  filter(Subtipo_de_delito %in% c("Lesiones dolosas", "Homicidio doloso")) %>%
-  ggplot() + 
-  geom_line(mapping = aes(x = Fecha, y = Cuenta, color = Tipo_de_delito))
+# gráfica old, delitos dolosos 
+# p4 <- delitos_tidy_tsbl %>%
+#   filter(Subtipo_de_delito %in% c("Lesiones dolosas", "Homicidio doloso")) %>%
+#   ggplot() + 
+#   geom_line(mapping = aes(x = Fecha, y = Cuenta, color = Tipo_de_delito))
+# 
+# p4
 
-p4
+perc_cambio_incidencias <- incidencias %>%
+  ggplot(aes(x = Anual, y = cambio, color = Subtipo_de_delito)) +
+  geom_line() +
+  geom_line(size = 1)+
+  facet_wrap(~ Subtipo_de_delito, scales = "free_y") +
+  theme(legend.position = "none")
+plotly::ggplotly(perc_cambio_incidencias)
 ```
 
-### Delitos violencia familiar 
 
-```{r}
-p5 <- delitos_tidy_tsbl %>%
-  filter (Tipo_de_delito == "Violencia familiar") %>%
-  ggplot() +
-  geom_line(mapping = aes(x = Fecha, y = Cuenta, color = Tipo_de_delito))
+<!-- Sección adicional que ponía los delitos de vionelencia familiar solor -->
+<!-- ### Delitos violencia familiar  -->
+<!-- ```{r} -->
+<!-- p5 <- delitos_tidy_tsbl %>% -->
+<!--   filter (Tipo_de_delito == "Violencia familiar") %>% -->
+<!--   ggplot() + -->
+<!--   geom_line(mapping = aes(x = Fecha, y = Cuenta, color = Tipo_de_delito)) -->
 
-p5
-```
+<!-- p5 -->
+<!-- ``` -->
 
 Mapa nacional 1 y pruebas realizadas
 ========================================
@@ -960,9 +1059,589 @@ Vacunas_latam_tsibble <- Vacunastotales_tsibble %>%
 
 
 ```
+Ranking Nacional
+=========================================
+
+### Calificación por estado para manejo de la pandemia
+
+```{r}
+
+# # Importación de datos ----------------------------------------------------
+# 
+# # Descarga de datos desde la página web
+# # fecha <- "210415"
+# options(timeout = 700)
+# temp <- tempfile()
+# download.file("http://datosabiertos.salud.gob.mx/gobmx/salud/datos_abiertos/datos_abiertos_covid19.zip", temp)
+# 
+# 
+# Datosmex2502 <- vroom::vroom(unz(temp, unzip(temp, list = TRUE) %>% pull(Name)))
+# unlink(temp)
+# 
+# Entidades <- read_xlsx("Datos nacionales abiertos/201128 Catalogos.xlsx",sheet="Catálogo de ENTIDADES")
+
+
+# Selección de datos ------------------------------------------------------
+
+#datos necesarios para la prueba
+FiltImpoData <- dplyr::select(Datosmex2502,
+                              `FECHA_INGRESO`,
+                              `ENTIDAD_RES`,
+                              `TOMA_MUESTRA_LAB`,
+                              `RESULTADO_LAB`, 
+                              `TOMA_MUESTRA_ANTIGENO`,
+                              `RESULTADO_ANTIGENO`, 
+                              `CLASIFICACION_FINAL`,
+                              `FECHA_DEF`,
+                              )%>%
+  left_join(Entidades, by=c("ENTIDAD_RES"="CLAVE_ENTIDAD"))
+
+#Población en cada estado del país, con datos a 2020
+poblacionEstado <- dplyr::select(df_mxstate_2020,
+                                 `region`,
+                                 `state_name`,
+                                 `pop`,
+)
+
+# Filtro de datos en tibbles ---------------------------------------------------------
+
+#datos confirmados 
+confirm <- FiltImpoData %>% 
+  filter(`CLASIFICACION_FINAL`%in% c(1,2,3)) %>% 
+  drop_na(`ENTIDAD_FEDERATIVA`, `FECHA_INGRESO`) %>% #borramos los datos NA que generan más filas(son pocos)
+  arrange(`FECHA_INGRESO`)
+  
+
+#Casos terminados en muerte
+muertesConfirm <- FiltImpoData %>% 
+  filter(!is.na(`FECHA_DEF`)) %>% 
+  drop_na(`ENTIDAD_FEDERATIVA`, `FECHA_INGRESO`) #quitamos datos NA (no interfiere)
+  
+  
+
+#datos de las pruebas realizadas ese día en todo el país
+filtroPrueba <- FiltImpoData %>% 
+  dplyr::filter(`TOMA_MUESTRA_LAB`== 1 | `TOMA_MUESTRA_ANTIGENO`==1 ) %>% #seleccuón de datos con pruebas
+  drop_na(`ENTIDAD_FEDERATIVA`, `FECHA_INGRESO`) #borrar datos NA (no afecta)
+  
+
+
+# Medias moviles de los estados casos positivos -----------------------------------------------------
+
+positivosXEstaXDia <- confirm %>% 
+  dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
+  mutate(POSITIVOS=n()) %>%
+  distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
+  arrange(`FECHA_INGRESO`) %>% 
+  dplyr::select(`FECHA_INGRESO`,
+         `ENTIDAD_RES`,
+         `ENTIDAD_FEDERATIVA`,
+         `FECHA_DEF`,
+         `POSITIVOS`,
+  )
+
+#promedio de los últimos catorce días
+positivosXEstaXDia %>% 
+  group_by(ENTIDAD_FEDERATIVA) %>% 
+  slice_tail(n = 14) 
+  # %>% 
+  # summarise(Promedio = mean(POSITIVOS))
+
+#media movil de 14 días
+positivos_tsbl <- positivosXEstaXDia %>% 
+  ungroup() %>% 
+  as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
+  mutate(
+    `14-MA` = slider::slide_dbl(POSITIVOS, mean,
+                               .before = 14, .complete = TRUE)
+  )
+# #gráfica de los positivos con la medi movil
+# positivos_tsbl %>% 
+#   feasts::autoplot(POSITIVOS) +
+#   geom_line(aes(y = `14-MA`), color = "black") +
+#   facet_wrap(~ ENTIDAD_FEDERATIVA, scales = "free_y") + 
+#   theme(legend.position = "none")
+
+
+# Medias moviles de los estados casos negativos ---------------------------
+
+muertesXEstaXDia <- muertesConfirm %>% 
+  dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
+  mutate(MUERTES=n()) %>%
+  distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
+  arrange(`FECHA_INGRESO`) %>% 
+  dplyr::select(`FECHA_INGRESO`,
+         `ENTIDAD_RES`,
+         `ENTIDAD_FEDERATIVA`,
+         `FECHA_DEF`,
+         `MUERTES`
+  )
+
+
+#promedio de los últimos catorce días
+muertesXEstaXDia %>% 
+  group_by(ENTIDAD_FEDERATIVA) %>% 
+  slice_tail(n = 14) 
+# %>% 
+#   summarise(Promedio = mean(MUERTES))
+
+#media movil de 14 días
+muertes_tsbl <- muertesXEstaXDia %>% 
+  ungroup() %>% 
+  as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
+  mutate(
+    `14-MA` = slider::slide_dbl(MUERTES, mean,
+                                .before = 14, .complete = TRUE)
+  )
+# #gráfica de los positivos con la medi movil
+# muertes_tsbl %>% 
+#   feasts::autoplot(MUERTES) +
+#   geom_line(aes(y = `14-MA`), color = "black") +
+#   facet_wrap(~ ENTIDAD_FEDERATIVA, scales = "free_y") + 
+#   theme(legend.position = "none")
+
+
+# medias movil positivos por millon de habitantes -------------------------
+
+positivosXEstaXDiaXmillon <- positivosXEstaXDia %>% 
+  left_join(poblacionEstado, by=c("ENTIDAD_RES"="region"))
+positivosXEstaXDiaXmillon$POSITIVOS <- (positivosXEstaXDiaXmillon$POSITIVOS*1000000)/positivosXEstaXDiaXmillon$pop
+  
+#media movil de 14 días
+positivosmillon_tsbl <- positivosXEstaXDiaXmillon %>% 
+  ungroup() %>% 
+  as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
+  mutate(
+    `14-MA` = slider::slide_dbl(POSITIVOS, mean,
+                                .before = 14, .complete = TRUE)
+  )
+
+# media movil muertes por millon de habitantes ----------------------------
+
+muertesXEstaXDiaXmillon <- muertesXEstaXDia %>% 
+  left_join(poblacionEstado, by=c("ENTIDAD_RES"="region"))
+muertesXEstaXDiaXmillon$MUERTES <- (muertesXEstaXDiaXmillon$MUERTES*1000000)/muertesXEstaXDiaXmillon$pop
+
+#media movil de 14 días
+muertesmillon_tsbl <- muertesXEstaXDiaXmillon %>% 
+  ungroup() %>% 
+  as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
+  mutate(
+    `14-MA` = slider::slide_dbl(MUERTES, mean,
+                                .before = 14, .complete = TRUE)
+  )
+
+
+# media movil de la positividad -------------------------------------------
+PruePosiXEstaXDia <- filtroPrueba %>% 
+    dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
+    mutate(PRUEBAS=n()) %>%
+    distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
+    arrange(`FECHA_INGRESO`) %>%
+    dplyr::select(`FECHA_INGRESO`,
+           `ENTIDAD_RES`,
+           `ENTIDAD_FEDERATIVA`,
+           `FECHA_DEF`,
+           `PRUEBAS`) %>% 
+   left_join(positivosXEstaXDia, positivosXEstaXDia, by= c("ENTIDAD_RES", "FECHA_INGRESO", "ENTIDAD_FEDERATIVA"))
+
+PruePosiXEstaXDia$POSITIVIDAD <- (PruePosiXEstaXDia$POSITIVOS/PruePosiXEstaXDia$PRUEBAS)*100
+
+#media movil de 14 días
+positivdad_tsbl <- PruePosiXEstaXDia %>% 
+  ungroup() %>% 
+  as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
+  mutate(
+    `14-MA` = slider::slide_dbl(POSITIVIDAD, mean,
+                                .before = 14, .complete = TRUE)
+  )
+
+# Media movil de pruebas por cada 1000 habitantes --------------------------
+
+pruebasXEstaXDia<- filtroPrueba %>% 
+  dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
+  mutate(PRUEBAS=n()) %>%
+  distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
+  arrange(`FECHA_INGRESO`) %>%
+  dplyr::select(`FECHA_INGRESO`,
+         `ENTIDAD_RES`,
+         `ENTIDAD_FEDERATIVA`,
+         `FECHA_DEF`,
+         `PRUEBAS`) %>% 
+  left_join(poblacionEstado, by=c("ENTIDAD_RES"="region"))
+
+pruebasXEstaXDia$XMILHAB <- ((1000*pruebasXEstaXDia$PRUEBAS)/pruebasXEstaXDia$pop)
+
+#media movil de 14 días
+pruebas_tsbl <- pruebasXEstaXDia %>% 
+  ungroup() %>% 
+  as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
+  mutate(
+    `14-MA` = slider::slide_dbl(XMILHAB, mean,
+                                .before = 14, .complete = TRUE)
+  ) 
+
+# Indicadores por día en cada estado  -------------------------------------
+
+# #Por día hacemos un conteo de los casos que se confirmaron en cada estado
+# positivosXEstaXDia <- confirm %>%
+#   dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
+#   mutate(POSITIVOS=n()) %>%
+#   distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
+#   arrange(`FECHA_INGRESO`) %>%
+#   select(`FECHA_INGRESO`,
+#          `ENTIDAD_RES`,
+#          `ENTIDAD_FEDERATIVA`,
+#          `FECHA_DEF`,
+#          `POSITIVOS`,
+#          )# %>%
+#   # add_column(SUMS=NA)
+# 
+# #Para generar las tablas de cada uno de los estados con su conteo
+# for(i in unique(positivosXEstaXDia$`ENTIDAD_RES`)) {
+#   nam <- paste0("positivoE.", i )
+#   assign(nam, positivosXEstaXDia[positivosXEstaXDia$`ENTIDAD_RES`==i,])
+# 
+# }
+# 
+# muertesXEstaXDia <- muertesConfirm %>% 
+#   dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
+#   mutate(MUERTES=n()) %>%
+#   distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
+#   arrange(`FECHA_INGRESO`) %>% 
+#   select(`FECHA_INGRESO`,
+#          `ENTIDAD_RES`,
+#          `ENTIDAD_FEDERATIVA`,
+#          `FECHA_DEF`,
+#          `MUERTES`
+#          )
+# for(i in unique(muertesXEstaXDia$`ENTIDAD_RES`)) {
+#   nam <- paste("muertesE", i, sep = ".")
+#   assign(nam, muertesXEstaXDia[muertesXEstaXDia$ENTIDAD_RES==i,])
+# }
+# pruebasXEstaXDia <- filtroPrueba %>% 
+#   dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
+#   mutate(PRUEBAS=n()) %>%
+#   distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
+#   arrange(`FECHA_INGRESO`) %>% 
+#   select(`FECHA_INGRESO`,
+#          `ENTIDAD_RES`,
+#          `ENTIDAD_FEDERATIVA`,
+#          `FECHA_DEF`,
+#          `PRUEBAS`)
+# for(i in unique(pruebasXEstaXDia$`ENTIDAD_RES`)) {
+#   nam <- paste("pruebasE", i, sep = ".")
+#   assign(nam, pruebasXEstaXDia[pruebasXEstaXDia$ENTIDAD_RES==i,]) 
+#   # add_column(rollsumr("pruebasE".i$PRUEBAS, k = 14, fill = NA))
+#   # pruebasE.i$promedio <- rollmean(`PRUEBAS`, k = 14, fill = NA, aling="rigth")
+# }
+# for (i in tibble("pruebasE", i,sep="·")){
+#   tibble("pruebasE", i,sep="·")$sums <-rollsumr(PRUEBAS, k = 14, fill = NA) %>% 
+#   tibble("pruebasE", i,sep="·")$promedio <- rollmean(PRUEBAS, k = 14, fill = NA, aling="rigth")
+# }
+# Promedio al día indicadores por estados -------------------------------------------------------------
+
+positivosXEstados <- confirm %>%
+  group_by(`ENTIDAD_RES`) %>%
+  mutate(Positivos=n()) %>%
+  distinct(`ENTIDAD_RES`, .keep_all = TRUE) %>%
+  arrange(`ENTIDAD_RES`) %>% 
+  dplyr::select(
+                `ENTIDAD_RES`,
+                `ENTIDAD_FEDERATIVA`,
+                `ABREVIATURA`,
+                `Positivos`) 
+
+# #promedios positivos al día en cada estado
+# positivosXEstaXDia <- positivosXEstaXDia %>% 
+#   ungroup() %>% 
+#   group_by(`ENTIDAD_RES`) %>% 
+#   mutate(
+#     PROM=mean(POSITIVOS)
+#     
+#   ) 
+
+
+muertesXEstado <- muertesConfirm %>%
+  group_by(`ENTIDAD_RES`) %>%
+  mutate(Muertes=n()) %>%
+  distinct(`ENTIDAD_RES`, .keep_all = TRUE) %>%
+  arrange(`ENTIDAD_RES`) %>% 
+  dplyr::select(`ENTIDAD_RES`,
+                `ENTIDAD_FEDERATIVA`,
+                `ABREVIATURA`,
+                `Muertes`) 
+
+# #promedios de muertes al día en cada estado
+# muertesXEstaXDia <- muertesXEstaXDia %>% 
+#   ungroup() %>% 
+#   group_by(`ENTIDAD_RES`) %>% 
+#   mutate(
+#     PROM=mean(MUERTES)
+#     
+#   ) 
+
+
+pruebasXEstado <- filtroPrueba  %>%
+  group_by(`ENTIDAD_RES`) %>%
+  mutate(Pruebas=n()) %>%
+  distinct(`ENTIDAD_RES`, .keep_all = TRUE) %>%
+  arrange(`ENTIDAD_RES`) %>% 
+  dplyr::select(`ENTIDAD_RES`,  # selección de datos necesarios 
+                `ENTIDAD_FEDERATIVA`,
+                `ABREVIATURA`,
+                `Pruebas`) 
+  
+
+
+# Por millon de habitantes ------------------------------------------------
+
+posiXEstaXMillon <- ((1000000*positivosXEstados$Positivos)/poblacionEstado$pop) 
+
+
+muerteXEstaXMillon <- ((1000000*muertesXEstado$Muertes)/poblacionEstado$pop)
+
+
+# Positividad  ------------------------------------------------------------
+
+PositividadIndica <- (positivosXEstados$Positivos/pruebasXEstado$Pruebas)*100
+# Pruebas por mil habitantes  ---------------------------------------------
+
+pruebasXEstaXMilhab <- ((1000*pruebasXEstado$Pruebas)/poblacionEstado$pop)
+
+
+# Tabla con datos finales xEstado -------------------------------------------------
+
+indicadoresFinal <- positivosXEstados %>% 
+  tibble::add_column(muertesXEstado$Muertes) %>% 
+  tibble::add_column(pruebasXEstado$Pruebas) %>% 
+  tibble::add_column(posiXEstaXMillon) %>% 
+  tibble::add_column(muerteXEstaXMillon) %>% 
+  tibble::add_column(PositividadIndica) %>% 
+  tibble::add_column(pruebasXEstaXMilhab)
+
+indicadoresFinal <- indicadoresFinal %>% 
+  ungroup() %>% 
+  group_by(`ENTIDAD_FEDERATIVA`) %>% 
+  mutate(
+    SUM= sum(`Positivos`,
+             `muertesXEstado$Muertes`,
+             posiXEstaXMillon,
+             muerteXEstaXMillon,
+             PositividadIndica,
+             pruebasXEstaXMilhab,
+             na.rm = TRUE),
+    PROM = (SUM/6)
+      ) 
+
+PromIndica <- indicadoresFinal %>% 
+  dplyr::select(`ENTIDAD_RES`,
+                `ENTIDAD_FEDERATIVA`,
+                `PROM`)
+# summary(PromIndica)
+
+# Normalización  ----------------------------------------------------------
+
+# library(caret)
+# 
+# 
+# preproc2 <- preProcess(PromIndica[,c(1:3)], method=c("range"))
+# 
+# norm2 <- predict(preproc2, PromIndica[,c(1:3)])
+# 
+# summary(norm2)
+
+
+normalize <- function(x) {
+  return (((x - min(x))*(100) / (max(x) - min(x))))
+}
+calificacion <- function(x) {
+  return (100-(((x - min(x))*(100) )/ (max(x) - min(x))))
+}
+PromIndica$NORM <- normalize(PromIndica$PROM)
+PromIndica$AVERAGE <- calificacion(PromIndica$PROM)
+
+
+# Tabla Calificación  -----------------------------------------------------
+
+calif <- PromIndica %>% 
+  dplyr::select(`ENTIDAD_FEDERATIVA`,
+                `AVERAGE`
+                ) %>% 
+  arrange(desc(AVERAGE))
+
+  colnames(calif)[colnames(calif)=="ENTIDAD_FEDERATIVA"] <- "ESTADO"
+
+#Tabla que muestra el número de pruebas que se hacen por día en los estados
+formattable(calif, #llamo datos
+            align =c("l","c"), #Para alinear los datos de la tabla cada "" es una columna
+            list(`ESTADO` = formatter( #datos específicos
+              "span", style = ~ formattable::style(color = "grey",font.weight = "bold")),
+              `AVERAGE` = color_tile("transparent", "orange")# me crea una barra roja con proporción a los datos
+            )
+)
+
+
+
+
+```
+
+Comparativa entre países (Contagios)
+=========================================
+
+```{r}
+#Carga de datos que se necesitan para generar los datos de este sección
+
+
+nuevos_casos_mundiales <- read_csv("https://raw.github.com/owid/covid-19-data/master/public/data/jhu/full_data.csv")
+
+casos_por_millon <- read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/jhu/new_cases_per_million.csv")
+
+# creación de variables que se necesitan para esta sección
+
+#vector para la selección de paises con población similar
+poblacion_similiar <- c("Mexico",
+                        "Japan", 
+                        "Russia", 
+                        "Bangladesh", 
+                        "Philippines")
+#Paises de LATAM
+latam <- c("Mexico", "Argentina", 
+           "Colombia", "Chile", 
+           "Brazil", "Bolivia", 
+           "Costa Rica", "Ecuador",
+           "Guatemala", "Panama", 
+           "Paraguay", "Peru", 
+    "Puerto Rico", "Dominican Republic")
+
+#Para la grafica GraphLatam
+
+Comparativa_casos_latam <- casos_por_millon %>%
+  dplyr::select(date, matches(latam)) %>%
+  pivot_longer(
+    cols = 'Mexico':'Dominican Republic',
+    names_to = "Paises",
+    values_to = "Casos_por_millon"
+  ) %>%
+  filter( Paises != "Ecuador")
+
+Comparativa_casos_latam_tsbl<- Comparativa_casos_latam %>%
+  as_tsibble(
+    index = date,
+    key = Paises
+  )
+
+```
+
+Column
+------------------------------------
+
+### Escenario mundial (población similar)
+
+```{r}
+Comparativa_nuevos_casos <- nuevos_casos_mundiales %>%
+  ggplot(aes(x = date, y = new_cases, group = location)) +
+  geom_line(color = "grey") +
+  geom_line(data = nuevos_casos_mundiales %>% filter(location %in% poblacion_similiar),
+            aes(color = location), size = 1) +
+  scale_y_log10() 
+
+Comparativa_nuevos_casos
+
+```
+
+Column
+------------------------------------
+
+### Escenario LATAM
+
+```{r}
+GraphLatam <- Comparativa_casos_latam_tsbl %>%
+  filter(Paises != "Ecuador") %>% #Se elimina ecuador de la lista de paises por datos críticos negativos
+  as_tsibble(
+    index = date )%>%
+  ggplot() +
+  geom_line(mapping = aes(x = date, y = Casos_por_millon, color = Paises)) +
+  facet_wrap(~ Paises, scales = "free_y") +
+  theme(legend.position = "none")
+  
+GraphLatam
+```
+
+
+
 
 Vacunación en LATAM
 =========================================
+
+```{r}
+#Datos de manejo y de carga para generar las visualizaciones en esta seccion
+
+#carga de datos
+#Se importan los datos como un tibble
+Vacunastotales <- readr::read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations.csv")
+
+#wrangle 
+
+#Se quiere trabajar con series de tiempo, entonces convertimos
+# a tsibble un objeto que tiene orientación a este tiempo de 
+#procesamiento 
+Vacunastotales_tsibble <- Vacunastotales %>%
+  dplyr::mutate(Daily = as.Date(date)) %>%
+  dplyr::select(-date) %>%
+  tsibble::as_tsibble(key = location,
+             index = Daily)
+
+#se hace una variable con los nombres de los paises de
+#LATAM para asi poder llamar la variable a buscar en
+#la base de datos si se requiere, esto esta pensado
+#en que la instrucción podría hacerse varias veces 
+#entonces en teoría debería simplificar el código
+  latam <- c("Mexico", "Argentina", 
+           "Colombia", "Chile", 
+           "Brazil", "Bolivia", 
+           "Costa Rica", "Ecuador",
+           "Guatemala", "Panama", 
+           "Paraguay", "Peru", 
+           "Puerto Rico", "Dominican Republic")
+  
+  #Se encontro que era particularmente complicado mostrar 
+  #todos los datos en una sola gráfica, por lo tanto,
+  #graficar por secciones y pegar con patchwork es una
+  #opción viable, por lo que la variable length(latam) = 14
+  #entonces dividimos en 2 grupos para tener símetria.
+  
+  latam1 <- latam[1:7]
+  latam2 <- latam[8:14]
+#latam == latam1 + latam2
+  
+  
+#hacemos otro data frame que solo sea para los de 
+#LATAM y asi trabajamos con un tsibble más pequeña
+Vacunas_latam_tsibble <- Vacunastotales_tsibble %>%
+  dplyr::select( Daily, location, total_vaccinations, 
+          total_vaccinations_per_hundred, 
+          daily_vaccinations_per_million) %>%
+  dplyr::filter(location %in% latam)
+
+#Tratando los valores faltantes y los que estan fuera de rango
+
+#VLT = contracción para Vacunas_latam_tsibble
+VLT_miss <- Vacunas_latam_tsibble %>% 
+  #filter(location %in% latam1) %>%
+  #anti_join(outliers) %>%
+  tsibble::fill_gaps() #aqui se remplazan por valores faltantes
+  #fill(direction = "down")
+
+#A continuacion hacemos un modelo ARIMA que se ajuste
+#a los datos que cotienen "valores faltantes"
+
+VLT_fill <- VLT_miss %>% 
+  fabletools::model(ARIMA(total_vaccinations_per_hundred)) %>%
+   fabletools::interpolate(VLT_miss)
+
+
+```
 
 Row
 ------------------------------------
@@ -971,32 +1650,51 @@ Row
 
 ```{r}
 
-#Gráfica que representa el escenario general para los paises 
-#de latam en el tiempo vacunados por cada 100 
-EscenarioLatam <- ggplot(data = Vacunas_latam_tsibble) + 
-  geom_line(mapping = aes(x = Daily, y = total_vaccinations_per_hundred, color = location)) +
+#Gráfica que representa el escenario general para los paises
+#de latam en el tiempo vacunados por cada 100
+EscenarioLatam <- ggplot(data = Vacunas_latam_tsibble) +
+geom_line(mapping = aes(x = Daily, y = total_vaccinations_per_hundred, color = location)) +
   labs(x = 'meses',
          y = 'Vacunas aplicadas por cada 100')
 
-plotly::ggplotly(EscenarioLatam) 
+ plotly::ggplotly(EscenarioLatam)
 
-#Notas de el gráifco EscenarioLatam 
+#Notas de el gráifco EscenarioLatam
 #muestra una tendencia creciente
 #con temporalidad variable
-#No hay evidencia de comportmaiento ciclico 
+#No hay evidencia de comportmaiento ciclico
+
+EscenarioLatam <- ggplot(data = Vacunas_latam_tsibble) +
+   geom_line(mapping = aes(x = Daily, y = total_vaccinations_per_hundred, color = location)) +
+   labs(title = 'Escenario general de vacunación en LATAM ',
+        x = 'meses',
+        y = 'Vacunas aplicadas por cada 100')
+
+ #Gráfica que representa el escenario general para los paises
+ #de latam en el tiempo vacunados por cada 100 (rellenado)
+
+ EscenarioLatam_fill <- ggplot(data = VLT_fill) +
+   geom_line(mapping = aes(x = Daily, y = total_vaccinations_per_hundred, color = location)) +
+   labs(title = 'Escenario general de vacunación en LATAM (sin valores faltantes)',
+        x = 'meses',
+        y = 'Vacunas aplicadas por cada 100')
+
+ EscenarioLatam_Comparacion = EscenarioLatam + EscenarioLatam_fill
+
+ EscenarioLatam_Comparacion
 
 
 ```
 
 
-### Temporalidad (Mensual)
+### Estacionalidad (Mensual)
 
 ```{r}
 # #Visualización por periocidad -------------------------------------------
 
 #Utilizando la función gg_season para hacer graficas
 #de la vacunación (2 gráficas por pais correspondiente a los
-# 2 años de los que se tienen datos) por mes. 
+# 2 años de los que se tienen datos) por mes.
 
 Vacunas_latam_tsibble %>%
   filter(location %in% latam1) %>%
@@ -1007,7 +1705,7 @@ Vacunas_latam_tsibble %>%
   expand_limits(x = ymd(c("2021-02","2021-04"))) -> g1
 
 
-#se repite el codigo para hacer lo mismo y luego juntarlos 
+#se repite el codigo para hacer lo mismo y luego juntarlos
 #con el apoyo de patch work
 Vacunas_latam_tsibble %>%
   filter(location %in% latam2) %>%
@@ -1024,11 +1722,11 @@ Vacunas_latam_tsibble %>%
 #Se encuentra interesante que en marzo la mayoría de los paises
 #tienen una linea constante
 #Méxio y chile empezaron la vacunación en las últimas semanas
-#de diciembre 
+#de diciembre
 
 # Visualización: Integración de los gráficos con PATCHWORK  -----------------------------
 
-#Establecemos un layout, que es basicamente un # para los espacios en blanco, y letras 
+#Establecemos un layout, que es basicamente un # para los espacios en blanco, y letras
 #para los lugares que deseamos que ocupe la letra
 layout <- '
 AAAABBBB
@@ -1043,13 +1741,13 @@ wrap_plots(A = g1,
 
 ```
 
-### Temporalidad (semanal por mes)
+### Estacionalidad (semanal por mes)
 ```{r}
 
 
 #Aquí vemos las gráficas anteriores más a detalle, pues podemos
-#ver en que semanas de cada mes hay crecimiento 
-Vacunas_latam_tsibble %>% 
+#ver en que semanas de cada mes hay crecimiento
+Vacunas_latam_tsibble %>%
   filter(location %in% latam1) %>%
   gg_season(total_vaccinations_per_hundred, period = "month") +
   labs(y = "Vacunas aplicadas por cada 100",
@@ -1059,17 +1757,17 @@ expand_limits(x = ymd(c("2021-02","2021-04"))) -> g3
 
 
 #repetimos el código para la sección 2
-Vacunas_latam_tsibble %>% 
+Vacunas_latam_tsibble %>%
   filter(location %in% latam2) %>%
   gg_season(total_vaccinations_per_hundred, period = "month") +
   labs(y = "Vacunas aplicadas por cada 100",
        x = "Periodicidad de las semanas del mes",
-       title = " Vacunación por semanana de los diferentes meses en los paises de LATAM") + 
+       title = " Vacunación por semanana de los diferentes meses en los paises de LATAM") +
 expand_limits(x = ymd(c("2021-02","2021-04"))) -> g4
 
 # Visualización: Integración de los gráficos con PATCHWORK  -----------------------------
 
-#Establecemos un layout, que es basicamente un # para los espacios en blanco, y letras 
+#Establecemos un layout, que es basicamente un # para los espacios en blanco, y letras
 #para los lugares que deseamos que ocupe la letra
 layout <- '
 AAAABBBB
@@ -1084,112 +1782,175 @@ wrap_plots(A = g3,
 
 ```
 
-Row
-------------------------------------
+Vacunación en LATAM (Pronósticos)
+=========================================
 
-### Pronósticos
+Column
+-----------------------------------
+
+### TSLM
 
 ```{r}
 
-# Definición del modelo ---------------------------------------------------
+# Modelo TSLM -------------------------------------------------------------
+#https://www.rdocumentation.org/packages/forecast/versions/8.14/topics/tslm
+
+#Descripción
+#Fit a linear model with time series components
+#tslm is used to fit linear models to time series including trend and seasonality components.
 
 
-#TSLM(total_vaccinations_per_hundred ~ trend())
+# Definición del modelo 
+
+TSLM(total_vaccinations_per_hundred ~ trend())
 
 
-# Entrenamiento del modelo (Estimación) -----------------------------------
+# Entrenamiento del modelo (Estimación) 
 
-fit <- Vacunas_latam_tsibble %>%
-  model(Modelo_tendencia = 
+fit_TSLM <- Vacunas_latam_tsibble %>%
+  fabletools::model(Modelo_tendencia = 
           TSLM(total_vaccinations_per_hundred ~ trend()))
-#fit
+fit_TSLM
 
 
-# Revisar el desempeño del modelo (evaluación) ----------------------------
+#Para datos rellenados 
+
+fit_TSLM_fill <- VLT_fill %>%
+  fabletools::model(Modelo_tendencia = 
+          TSLM(total_vaccinations_per_hundred ~ trend()))
+  
+fit_TSLM_fill
+
+# Revisar el desempeño del modelo (evaluación) 
 
 
-# Producir pronósticos ----------------------------------------------------
+# Producir pronósticos 
 
 #Se genera la tabla de pronósticos, el cual va ser
 #una tabla de tipo fable (objeto) es decir
 #forecasting table
-fcst <- fit %>% forecast(h = 3) #se hace para los siguientes 3 meses
+fcst_TSLM <- fit_TSLM %>% forecast(h = 15) #se hace para los siguientes 3 meses
                                 #pues los datos que se tienen hasta el momento
                                 # son de 4 - 5 meses
-#fcst
+fcst_TSLM
+
+#tabla de pronósticos, datos rellenados
+
+fcst_TSLM_fill <- fit_TSLM_fill %>%  forecast(h = 15)
+
+fcst_TSLM_fill
 
 # Visualización de la forecasting table
 
 #para grupo 1 latama
 
-fcst %>%
-  filter(location %in% latam1) %>%
+fcst_TSLM %>%
+  dplyr::filter(location %in% latam1) %>%
   autoplot(Vacunas_latam_tsibble) +
   ggtitle('Vacunas en LATAM') + 
-  ylab('Vacunas aplicadas por cada 100') +
-  xlab('Mes') -> fcst1
+  ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_g1
+
+#para grupo 1 latam (rellenado)
+
+fcst_TSLM_fill %>%
+  dplyr::filter(location %in% latam1) %>%
+  autoplot(VLT_fill) +
+  ggtitle('Vacunas en LATAM') + 
+  ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_fill_g1
 
 #para grupo 2 latam
 
-fcst %>%
-  filter(location %in% latam2) %>%
+fcst_TSLM %>%
+  dplyr::filter(location %in% latam2) %>%
   autoplot(Vacunas_latam_tsibble) +
   ggtitle('Vacunas en LATAM') + 
-  ylab('Vacunas aplicadas por cada 100') + 
-  xlab('Mes') -> fcst2
+  ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_g2
+
+#para grupo 2 latam (rellenado)
+
+fcst_TSLM_fill %>%
+  dplyr::filter(location %in% latam2) %>%
+  autoplot(VLT_fill) +
+  ggtitle('Vacunas en LATAM') + 
+  ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_fill_g2
 
 #integración de las visualizaciones
 
-fcst3 = fcst1 + fcst2 
-fcst3
+fcst_TSLM_g3 = fcst_TSLM_g1 + fcst_TSLM_fill_g1 + fcst_TSLM_g2 + fcst_TSLM_fill_g2 
+fcst_TSLM_g3
 ```
 
-<!-- Summary {data-orientation=columns}  -->
-<!-- =========================================== -->
+Column
+-----------------------------------
 
-<!-- Column  -->
-<!-- ----------------------------------- -->
+### ETS
 
-<!-- ### Max Failure Month -->
+```{r}
 
-<!-- ```{r} -->
-<!-- valueBox(max(data$fm), -->
-<!--          icon = "fa-user" ) -->
-<!-- ``` -->
+# Modelo ETS (suavización exponencial con tendencia) ----------------------------
+#https://www.rdocumentation.org/packages/forecast/versions/8.14/topics/ets
 
-<!-- ### Average Labor cost -->
-<!-- ```{r} -->
-<!-- valueBox(round(mean(data$lc), -->
-<!--                digits = 2), -->
-<!--          icon = "fa-area-chart") -->
-<!-- ``` -->
+#ETS = Exponential smoothing state space model
 
-<!-- ### Average Mileage at Failure -->
+#Description
+# Returns ETS model applied to "y"
 
-<!-- ```{r} -->
-<!-- valueBox(round(mean(data$Mileage), digits = 2), -->
-<!--          icon = "fa-area-chart") -->
-<!-- ``` -->
 
-<!-- Column -->
-<!-- --------------------------- -->
+#Parámetros estimados
 
-<!-- Report -->
+#Estimamos alfa (entre 0 y 1, la tasa a la que disminuye "el peso" de los datos en el modelo, tambien conocida como el parametro de suavizacion)
+#L0 o Lt (nivel, o valor suavizado)
+#Beta (entre 0 y 1, es el coefficiente que representa la pendiente de la "tendencia" )
 
-<!-- * This is a report on `r length(data$fm)` car failures. -->
+# 'A' es para 'aditivo' , 'M' para multiplicativo y 'N' para ninguno
+# Como nuestros datos tienen una tendencia marcada, seleccionmos que tanto
+#el error como la tendencia sean "aditivos" 
 
-<!-- * The average labor cost was `r mean(data$lc)`. -->
+fit_ETS_trend <- VLT_fill %>%
+  model(ETS(total_vaccinations_per_hundred ~ error('A') + trend('A') + season('N')))
+ 
+#Generamos el pronóstico para 5 pasos después 
 
-<!-- * The average material cost was `r mean(data$mc)`. -->
+fcst_ETS_trend <- fit_ETS_trend %>%
+  forecast(h = 15) %>%
+  autoplot(VLT_fill) + 
+  facet_wrap(~location, ncol = 3, scales = 'free_y') +
+  labs(title = 'Pronóstico de vacunas latam con ETS',  
+       x = 'meses',
+       y = 'Vacunas aplicadas por cada 100') -> fcst_ETS_trend_g1
 
-<!-- This report was generated on `r format(Sys.Date(), format = "%B %d, %Y")`. -->
+#El método de Holt es el que nos permite hacer suavizacion
+#exponencial para datos con tendencia 
 
-<!-- About Report -->
-<!-- ======================================== -->
 
-<!-- Created by: Data Scientist at ABC -->
 
-<!-- Confidential: HIGHLY! -->
+#Holt tiene un problema, que la tendencia solo se establece
+#como creciente o decreciente. Por lo que se desarrollo
+#una funcion que hace este metodo pero amortiguado
+
+# phi es el factor de "amortiguamiento", donde phi 
+# con un valor igual a 1, es identico al metodo de Holt sin
+# amortiguamiento
+
+#Ad -> aditive damped
+
+fit_ETS_trendDamped <- VLT_fill %>%
+  model(ETS(total_vaccinations_per_hundred ~ error('A') + trend('Ad') + season('N')))
+  
+
+  fcst_ETS_trendDamped <- fit_ETS_trendDamped %>%
+  forecast(h = 15) %>%
+  autoplot(VLT_fill) +
+  facet_wrap(~location, ncol = 3, scales = 'free_y') +
+  labs(title = 'pronóstico de vacunas latama con ETS amortiguado',
+       x = 'meses',
+       y = 'Vacunas aplicadas por cada 100') -> fcst_ETS_trendDamped_g1
+
+fcst_ETS_comparacion = fcst_ETS_trend_g1 + fcst_ETS_trendDamped_g1
+
+fcst_ETS_comparacion
+
+```
 
 
 
