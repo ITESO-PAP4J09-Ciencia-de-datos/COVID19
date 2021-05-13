@@ -88,7 +88,7 @@ positivosXEstaXDia <- confirm %>%
   mutate(POSITIVOS=n()) %>%
   distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
   arrange(`FECHA_INGRESO`) %>% 
-  select(`FECHA_INGRESO`,
+  dplyr::select(`FECHA_INGRESO`,
          `ENTIDAD_RES`,
          `ENTIDAD_FEDERATIVA`,
          `FECHA_DEF`,
@@ -191,17 +191,17 @@ PruePosiXEstaXDia <- filtroPrueba %>%
     mutate(PRUEBAS=n()) %>%
     distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
     arrange(`FECHA_INGRESO`) %>%
-    select(`FECHA_INGRESO`,
+    dplyr::select(`FECHA_INGRESO`,
            `ENTIDAD_RES`,
            `ENTIDAD_FEDERATIVA`,
            `FECHA_DEF`,
            `PRUEBAS`) %>% 
-   left_join(positivosXEstaXDia, positivosXEstaXDia, by= c("ENTIDAD_RES", "FECHA_INGRESO", "ENTIDAD_FEDERATIVA"))
+   dplyr::left_join(positivosXEstaXDia, positivosXEstaXDia, by= c("ENTIDAD_RES", "FECHA_INGRESO", "ENTIDAD_FEDERATIVA"))
 
 PruePosiXEstaXDia$POSITIVIDAD <- (PruePosiXEstaXDia$POSITIVOS/PruePosiXEstaXDia$PRUEBAS)*100
 
 #media movil de 14 días
-positivdad_tsbl <- PruePosiXEstaXDia %>% 
+positivdad_tsbl <-PruePosiXEstaXDia %>% 
   ungroup() %>% 
   as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
   mutate(
@@ -216,7 +216,7 @@ pruebasXEstaXDia<- filtroPrueba %>%
   mutate(PRUEBAS=n()) %>%
   distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
   arrange(`FECHA_INGRESO`) %>%
-  select(`FECHA_INGRESO`,
+  dplyr::select(`FECHA_INGRESO`,
          `ENTIDAD_RES`,
          `ENTIDAD_FEDERATIVA`,
          `FECHA_DEF`,
@@ -326,13 +326,13 @@ muertesXEstado <- muertesConfirm %>%
                 `Muertes`) 
 
 # #promedios de muertes al día en cada estado
-# muertesXEstaXDia <- muertesXEstaXDia %>% 
-#   ungroup() %>% 
-#   group_by(`ENTIDAD_RES`) %>% 
+# muertesXEstaXDia <- muertesXEstaXDia %>%
+#   ungroup() %>%
+#   group_by(`ENTIDAD_RES`) %>%
 #   mutate(
 #     PROM=mean(MUERTES)
-#     
-#   ) 
+# 
+#   )
 
 
 pruebasXEstado <- filtroPrueba  %>%

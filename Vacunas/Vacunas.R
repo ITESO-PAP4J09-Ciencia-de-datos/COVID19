@@ -15,6 +15,8 @@ library(lubridate)
 #integrar visualización
 library(patchwork)
 
+library(raster)
+
 # Carga de datos ----------------------------------------------------------
 
 #Se importan los datos como un tibble
@@ -63,7 +65,7 @@ Vacunas_latam_tsibble <- Vacunastotales_tsibble %>%
   dplyr::select( Daily, location, total_vaccinations, 
           total_vaccinations_per_hundred, 
           daily_vaccinations_per_million) %>%
-  filter(location %in% latam)
+  dplyr::filter(location %in% latam)
 
 #Tratando los valores faltantes y los que estan fuera de rango
 
@@ -71,15 +73,15 @@ Vacunas_latam_tsibble <- Vacunastotales_tsibble %>%
 VLT_miss <- Vacunas_latam_tsibble %>% 
   #filter(location %in% latam1) %>%
   #anti_join(outliers) %>%
-  fill_gaps() #aqui se remplazan por valores faltantes
+  tsibble::fill_gaps() #aqui se remplazan por valores faltantes
   #fill(direction = "down")
 
 #A continuacion hacemos un modelo ARIMA que se ajuste
 #a los datos que cotienen "valores faltantes"
 
 VLT_fill <- VLT_miss %>% 
-  model(ARIMA(total_vaccinations_per_hundred)) %>%
-  interpolate(VLT_miss)
+  fabletools::model(ARIMA(total_vaccinations_per_hundred))%>%
+fabletools::interpolate(VLT_miss)
 
 
 ### Visualización -----------------------------------------------------------
@@ -217,7 +219,7 @@ TSLM(total_vaccinations_per_hundred ~ trend())
 # Entrenamiento del modelo (Estimación) 
 
 fit_TSLM <- Vacunas_latam_tsibble %>%
-  model(Modelo_tendencia = 
+  fabletools::model(Modelo_tendencia = 
           TSLM(total_vaccinations_per_hundred ~ trend()))
 fit_TSLM
 
@@ -225,7 +227,7 @@ fit_TSLM
 #Para datos rellenados 
 
 fit_TSLM_fill <- VLT_fill %>%
-  model(Modelo_tendencia = 
+  fabletools::model(Modelo_tendencia = 
           TSLM(total_vaccinations_per_hundred ~ trend()))
   
 fit_TSLM_fill
@@ -238,56 +240,80 @@ fit_TSLM_fill
 #Se genera la tabla de pronósticos, el cual va ser
 #una tabla de tipo fable (objeto) es decir
 #forecasting table
-fcst_TSLM <- fit_TSLM %>% forecast(h = 3) #se hace para los siguientes 3 meses
+fcst_TSLM <- fit_TSLM %>% forecast(h = 15) #se hace para los siguientes 3 meses
                                 #pues los datos que se tienen hasta el momento
                                 # son de 4 - 5 meses
 fcst_TSLM
 
 #tabla de pronósticos, datos rellenados
 
-fcst_TSLM_fill <- fit_TSLM_fill %>%  forecast(h = 3)
+fcst_TSLM_fill <- fit_TSLM_fill %>%  forecast(h = 15)
 
 fcst_TSLM_fill
 
 # Visualización de la forecasting table
 
+
 #para grupo 1 latama
 
+# fcst_TSLM %>%
+#   dplyr::filter(location %in% latam1) %>%
+#   autoplot(Vacunas_latam_tsibble) +
+#   ggtitle('Vacunas en LATAM') + 
+#   ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_g1
+# 
+# #para grupo 1 latam (rellenado)
+# 
+# fcst_TSLM_fill %>%
+#   dplyr::filter(location %in% latam1) %>%
+#   autoplot(VLT_fill) +
+#   ggtitle('Vacunas en LATAM') + 
+#   ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_fill_g1
+# 
+# #para grupo 2 latam
+# 
+# fcst_TSLM %>%
+#   dplyr::filter(location %in% latam2) %>%
+#   autoplot(Vacunas_latam_tsibble) +
+#   ggtitle('Vacunas en LATAM') + 
+#   ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_g2
+# 
+# #para grupo 2 latam (rellenado)
+# 
+# fcst_TSLM_fill %>%
+#   dplyr::filter(location %in% latam2) %>%
+#   autoplot(VLT_fill) +
+#   ggtitle('Vacunas en LATAM') + 
+#   ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_fill_g2
+
+#latam sin rellenar
+
 fcst_TSLM %>%
-  filter(location %in% latam1) %>%
   autoplot(Vacunas_latam_tsibble) +
+  facet_wrap(~location, ncol = 3, scales = 'free_y') +
   ggtitle('Vacunas en LATAM') + 
   ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_g1
 
-#para grupo 1 latam (rellenado)
+
+#latam rellenado
 
 fcst_TSLM_fill %>%
-  filter(location %in% latam1) %>%
   autoplot(VLT_fill) +
+  facet_wrap(~location, ncol = 3, scales = 'free_y') +
   ggtitle('Vacunas en LATAM') + 
   ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_fill_g1
 
-#para grupo 2 latam
 
-fcst_TSLM %>%
-  filter(location %in% latam2) %>%
-  autoplot(Vacunas_latam_tsibble) +
-  ggtitle('Vacunas en LATAM') + 
-  ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_g2
 
-#para grupo 2 latam (rellenado)
+#integración de las visualizaciones (old)
+# fcst_TSLM_g3 = fcst_TSLM_g1 + fcst_TSLM_fill_g1 + fcst_TSLM_g2 + fcst_TSLM_fill_g2 
+# fcst_TSLM_g3
 
-fcst_TSLM_fill %>%
-  filter(location %in% latam2) %>%
-  autoplot(VLT_fill) +
-  ggtitle('Vacunas en LATAM') + 
-  ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_fill_g2
+#integración de visualizaciones 
 
-#integración de las visualizaciones
+fcst_TSLM_g3 = fcst_TSLM_g1 + fcst_TSLM_fill_g1
 
-fcst_TSLM_g3 = fcst_TSLM_g1 + fcst_TSLM_fill_g1 + fcst_TSLM_g2 + fcst_TSLM_fill_g2 
 fcst_TSLM_g3
-
 
 
 # Modelo ETS (suavización exponencial con tendencia) ----------------------------
@@ -315,8 +341,9 @@ fit_ETS_trend <- VLT_fill %>%
 #Generamos el pronóstico para 5 pasos después 
 
 fcst_ETS_trend <- fit_ETS_trend %>%
-  forecast(h = 3) %>%
-  autoplot(VLT_fill, level = NULL) + 
+  forecast(h = 15) %>%
+  autoplot(VLT_fill) + 
+  facet_wrap(~location, ncol = 3, scales = 'free_y') +
   labs(title = 'Pronóstico de vacunas latam con ETS',  
        x = 'meses',
        y = 'Vacunas aplicadas por cada 100') -> fcst_ETS_trend_g1
@@ -339,22 +366,20 @@ fcst_ETS_trend <- fit_ETS_trend %>%
 fit_ETS_trendDamped <- VLT_fill %>%
   model(ETS(total_vaccinations_per_hundred ~ error('A') + trend('Ad') + season('N')))
 
-fcst_ETS_trendDamped <- fit_ETS_trendDamped %>%
-  forecast(h = 3) %>%
-  autoplot(VLT_fill, level = NULL) + 
-  labs(title = 'Pronóstico de vacunas latam con ETS amortiguado',  
+  
+
+  fcst_ETS_trendDamped <- fit_ETS_trendDamped %>%
+  forecast(h = 15) %>%
+  autoplot(VLT_fill) +
+  facet_wrap(~location, ncol = 3, scales = 'free_y') +
+  labs(title = 'pronóstico de vacunas latama con ETS amortiguado',
        x = 'meses',
        y = 'Vacunas aplicadas por cada 100') -> fcst_ETS_trendDamped_g1
 
-fcst_ETS_comparacion = fcst_ETS_trend + fcst_ETS_trendDamped_g1
+fcst_ETS_comparacion = fcst_ETS_trend_g1 + fcst_ETS_trendDamped_g1
 fcst_ETS_comparacion
 
-fit_ETS_trendDamped %>%
-  forecast(h = '1 month') %>%
-  autoplot(VLT_fill) +
-  facet_wrap(~location, ncol = 3, scales = 'free_y') +
-  labs(x = 'meses',
-       y = 'Vacunas aplicadas por cada 100')
+
 
 # fit_ETS_trend %>%
 #   forecast(h = 3) %>%
