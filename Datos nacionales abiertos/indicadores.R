@@ -366,12 +366,12 @@ pruebasXEstaXMilhab <- ((1000*pruebasXEstado$Pruebas)/poblacionEstado$pop)
 # Tabla con datos finales xEstado -------------------------------------------------
 
 indicadoresFinal <- positivosXEstados %>% 
-  add_column(muertesXEstado$Muertes) %>% 
-  add_column(pruebasXEstado$Pruebas) %>% 
-  add_column(posiXEstaXMillon) %>% 
-  add_column(muerteXEstaXMillon) %>% 
-  add_column(PositividadIndica) %>% 
-  add_column(pruebasXEstaXMilhab)
+  tibble::add_column(muertesXEstado$Muertes) %>% 
+  tibble::add_column(pruebasXEstado$Pruebas) %>% 
+  tibble::add_column(posiXEstaXMillon) %>% 
+  tibble::add_column(muerteXEstaXMillon) %>% 
+  tibble::add_column(PositividadIndica) %>% 
+  tibble::add_column(pruebasXEstaXMilhab)
 
 indicadoresFinal <- indicadoresFinal %>% 
   ungroup() %>% 
