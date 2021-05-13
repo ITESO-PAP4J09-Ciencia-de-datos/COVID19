@@ -17,7 +17,7 @@ library(dplyr)
 
 #Tablas
 # library(data.table)
-# library(formattable)
+ library(formattable)
 # library(tables)
 library(mxmaps) #datos de méxico, INEGI y ubicación para mapa
 
@@ -81,7 +81,7 @@ filtroPrueba <- FiltImpoData %>%
   
 
 
-# Indicadores por dia -----------------------------------------------------
+# Medias moviles de los estados casos positivos -----------------------------------------------------
 
 positivosXEstaXDia <- confirm %>% 
   dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
@@ -95,11 +95,13 @@ positivosXEstaXDia <- confirm %>%
          `POSITIVOS`,
   )
 
+#promedio de los últimos catorce días
 positivosXEstaXDia %>% 
   group_by(ENTIDAD_FEDERATIVA) %>% 
   slice_tail(n = 14) %>% 
   summarise(Promedio = mean(POSITIVOS))
 
+#media movil de 14 días
 positivos_tsbl <- positivosXEstaXDia %>% 
   ungroup() %>% 
   as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
@@ -107,35 +109,15 @@ positivos_tsbl <- positivosXEstaXDia %>%
     `14-MA` = slider::slide_dbl(POSITIVOS, mean,
                                .before = 14, .complete = TRUE)
   )
-
+#gráfica de los positivos con la medi movil
 positivos_tsbl %>% 
   feasts::autoplot(POSITIVOS) +
   geom_line(aes(y = `14-MA`), color = "black") +
   facet_wrap(~ ENTIDAD_FEDERATIVA, scales = "free_y") + 
   theme(legend.position = "none")
 
-# Indicadores por día en cada estado  -------------------------------------
 
-#Por día hacemos un conteo de los casos que se confirmaron en cada estado
-positivosXEstaXDia <- confirm %>% 
-  dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
-  mutate(POSITIVOS=n()) %>%
-  distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
-  arrange(`FECHA_INGRESO`) %>% 
-  select(`FECHA_INGRESO`,
-         `ENTIDAD_RES`,
-         `ENTIDAD_FEDERATIVA`,
-         `FECHA_DEF`,
-         `POSITIVOS`,
-         )# %>%
-  # add_column(SUMS=NA)
- 
-#Para generar las tablas de cada uno de los estados con su conteo 
-for(i in unique(positivosXEstaXDia$`ENTIDAD_RES`)) {
-  nam <- paste0("positivoE.", i )
-  assign(nam, positivosXEstaXDia[positivosXEstaXDia$`ENTIDAD_RES`==i,])
-  
-}
+# Medias moviles de los estados casos negativos ---------------------------
 
 muertesXEstaXDia <- muertesConfirm %>% 
   dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
@@ -147,42 +129,191 @@ muertesXEstaXDia <- muertesConfirm %>%
          `ENTIDAD_FEDERATIVA`,
          `FECHA_DEF`,
          `MUERTES`
-         )
-for(i in unique(muertesXEstaXDia$`ENTIDAD_RES`)) {
-  nam <- paste("muertesE", i, sep = ".")
-  assign(nam, muertesXEstaXDia[muertesXEstaXDia$ENTIDAD_RES==i,])
-}
-pruebasXEstaXDia <- filtroPrueba %>% 
+  )
+
+
+#promedio de los últimos catorce días
+muertesXEstaXDia %>% 
+  group_by(ENTIDAD_FEDERATIVA) %>% 
+  slice_tail(n = 14) %>% 
+  summarise(Promedio = mean(MUERTES))
+
+#media movil de 14 días
+muertes_tsbl <- muertesXEstaXDia %>% 
+  ungroup() %>% 
+  as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
+  mutate(
+    `14-MA` = slider::slide_dbl(MUERTES, mean,
+                                .before = 14, .complete = TRUE)
+  )
+#gráfica de los positivos con la medi movil
+muertes_tsbl %>% 
+  feasts::autoplot(MUERTES) +
+  geom_line(aes(y = `14-MA`), color = "black") +
+  facet_wrap(~ ENTIDAD_FEDERATIVA, scales = "free_y") + 
+  theme(legend.position = "none")
+
+
+# medias movil positivos por millon de habitantes -------------------------
+
+positivosXEstaXDiaXmillon <- positivosXEstaXDia %>% 
+  left_join(poblacionEstado, by=c("ENTIDAD_RES"="region"))
+positivosXEstaXDiaXmillon$POSITIVOS <- (positivosXEstaXDiaXmillon$POSITIVOS*1000000)/positivosXEstaXDiaXmillon$pop
+  
+#media movil de 14 días
+positivosmillon_tsbl <- positivosXEstaXDiaXmillon %>% 
+  ungroup() %>% 
+  as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
+  mutate(
+    `14-MA` = slider::slide_dbl(POSITIVOS, mean,
+                                .before = 14, .complete = TRUE)
+  )
+
+# media movil muertes por millon de habitantes ----------------------------
+
+muertesXEstaXDiaXmillon <- muertesXEstaXDia %>% 
+  left_join(poblacionEstado, by=c("ENTIDAD_RES"="region"))
+muertesXEstaXDiaXmillon$MUERTES <- (muertesXEstaXDiaXmillon$MUERTES*1000000)/muertesXEstaXDiaXmillon$pop
+
+#media movil de 14 días
+muertesmillon_tsbl <- muertesXEstaXDiaXmillon %>% 
+  ungroup() %>% 
+  as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
+  mutate(
+    `14-MA` = slider::slide_dbl(MUERTES, mean,
+                                .before = 14, .complete = TRUE)
+  )
+
+
+# media movil de la positividad -------------------------------------------
+PruePosiXEstaXDia <- filtroPrueba %>% 
+    dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
+    mutate(PRUEBAS=n()) %>%
+    distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
+    arrange(`FECHA_INGRESO`) %>%
+    select(`FECHA_INGRESO`,
+           `ENTIDAD_RES`,
+           `ENTIDAD_FEDERATIVA`,
+           `FECHA_DEF`,
+           `PRUEBAS`) %>% 
+   left_join(positivosXEstaXDia, positivosXEstaXDia, by= c("ENTIDAD_RES", "FECHA_INGRESO", "ENTIDAD_FEDERATIVA"))
+
+PruePosiXEstaXDia$POSITIVIDAD <- (PruePosiXEstaXDia$POSITIVOS/PruePosiXEstaXDia$PRUEBAS)*100
+
+#media movil de 14 días
+positivdad_tsbl <- PruePosiXEstaXDia %>% 
+  ungroup() %>% 
+  as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
+  mutate(
+    `14-MA` = slider::slide_dbl(POSITIVIDAD, mean,
+                                .before = 14, .complete = TRUE)
+  )
+
+# Media movil de pruebas por cada 1000 habitantes --------------------------
+
+pruebasXEstaXDia<- filtroPrueba %>% 
   dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
   mutate(PRUEBAS=n()) %>%
   distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
-  arrange(`FECHA_INGRESO`) %>% 
+  arrange(`FECHA_INGRESO`) %>%
   select(`FECHA_INGRESO`,
          `ENTIDAD_RES`,
          `ENTIDAD_FEDERATIVA`,
          `FECHA_DEF`,
-         `PRUEBAS`)
-for(i in unique(pruebasXEstaXDia$`ENTIDAD_RES`)) {
-  nam <- paste("pruebasE", i, sep = ".")
-  assign(nam, pruebasXEstaXDia[pruebasXEstaXDia$ENTIDAD_RES==i,]) 
-  # add_column(rollsumr("pruebasE".i$PRUEBAS, k = 14, fill = NA))
-  # pruebasE.i$promedio <- rollmean(`PRUEBAS`, k = 14, fill = NA, aling="rigth")
-}
-for (i in tibble("pruebasE", i,sep="·")){
-  tibble("pruebasE", i,sep="·")$sums <-rollsumr(PRUEBAS, k = 14, fill = NA) %>% 
-  tibble("pruebasE", i,sep="·")$promedio <- rollmean(PRUEBAS, k = 14, fill = NA, aling="rigth")
-}
-# Indicadores por estados -------------------------------------------------------------
+         `PRUEBAS`) %>% 
+  left_join(poblacionEstado, by=c("ENTIDAD_RES"="region"))
+
+pruebasXEstaXDia$XMILHAB <- ((1000*pruebasXEstaXDia$PRUEBAS)/pruebasXEstaXDia$pop)
+
+#media movil de 14 días
+pruebas_tsbl <- pruebasXEstaXDia %>% 
+  ungroup() %>% 
+  as_tsibble(index = FECHA_INGRESO, key = ENTIDAD_FEDERATIVA) %>% 
+  mutate(
+    `14-MA` = slider::slide_dbl(XMILHAB, mean,
+                                .before = 14, .complete = TRUE)
+  ) 
+
+# Indicadores por día en cada estado  -------------------------------------
+
+# #Por día hacemos un conteo de los casos que se confirmaron en cada estado
+# positivosXEstaXDia <- confirm %>%
+#   dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
+#   mutate(POSITIVOS=n()) %>%
+#   distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
+#   arrange(`FECHA_INGRESO`) %>%
+#   select(`FECHA_INGRESO`,
+#          `ENTIDAD_RES`,
+#          `ENTIDAD_FEDERATIVA`,
+#          `FECHA_DEF`,
+#          `POSITIVOS`,
+#          )# %>%
+#   # add_column(SUMS=NA)
+# 
+# #Para generar las tablas de cada uno de los estados con su conteo
+# for(i in unique(positivosXEstaXDia$`ENTIDAD_RES`)) {
+#   nam <- paste0("positivoE.", i )
+#   assign(nam, positivosXEstaXDia[positivosXEstaXDia$`ENTIDAD_RES`==i,])
+# 
+# }
+# 
+# muertesXEstaXDia <- muertesConfirm %>% 
+#   dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
+#   mutate(MUERTES=n()) %>%
+#   distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
+#   arrange(`FECHA_INGRESO`) %>% 
+#   select(`FECHA_INGRESO`,
+#          `ENTIDAD_RES`,
+#          `ENTIDAD_FEDERATIVA`,
+#          `FECHA_DEF`,
+#          `MUERTES`
+#          )
+# for(i in unique(muertesXEstaXDia$`ENTIDAD_RES`)) {
+#   nam <- paste("muertesE", i, sep = ".")
+#   assign(nam, muertesXEstaXDia[muertesXEstaXDia$ENTIDAD_RES==i,])
+# }
+# pruebasXEstaXDia <- filtroPrueba %>% 
+#   dplyr::group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
+#   mutate(PRUEBAS=n()) %>%
+#   distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
+#   arrange(`FECHA_INGRESO`) %>% 
+#   select(`FECHA_INGRESO`,
+#          `ENTIDAD_RES`,
+#          `ENTIDAD_FEDERATIVA`,
+#          `FECHA_DEF`,
+#          `PRUEBAS`)
+# for(i in unique(pruebasXEstaXDia$`ENTIDAD_RES`)) {
+#   nam <- paste("pruebasE", i, sep = ".")
+#   assign(nam, pruebasXEstaXDia[pruebasXEstaXDia$ENTIDAD_RES==i,]) 
+#   # add_column(rollsumr("pruebasE".i$PRUEBAS, k = 14, fill = NA))
+#   # pruebasE.i$promedio <- rollmean(`PRUEBAS`, k = 14, fill = NA, aling="rigth")
+# }
+# for (i in tibble("pruebasE", i,sep="·")){
+#   tibble("pruebasE", i,sep="·")$sums <-rollsumr(PRUEBAS, k = 14, fill = NA) %>% 
+#   tibble("pruebasE", i,sep="·")$promedio <- rollmean(PRUEBAS, k = 14, fill = NA, aling="rigth")
+# }
+# Promedio al día indicadores por estados -------------------------------------------------------------
 
 positivosXEstados <- confirm %>%
   group_by(`ENTIDAD_RES`) %>%
   mutate(Positivos=n()) %>%
   distinct(`ENTIDAD_RES`, .keep_all = TRUE) %>%
   arrange(`ENTIDAD_RES`) %>% 
-  dplyr::select(`ENTIDAD_RES`,
+  dplyr::select(
+                `ENTIDAD_RES`,
                 `ENTIDAD_FEDERATIVA`,
                 `ABREVIATURA`,
                 `Positivos`) 
+
+# #promedios positivos al día en cada estado
+# positivosXEstaXDia <- positivosXEstaXDia %>% 
+#   ungroup() %>% 
+#   group_by(`ENTIDAD_RES`) %>% 
+#   mutate(
+#     PROM=mean(POSITIVOS)
+#     
+#   ) 
+
 
 muertesXEstado <- muertesConfirm %>%
   group_by(`ENTIDAD_RES`) %>%
@@ -193,6 +324,16 @@ muertesXEstado <- muertesConfirm %>%
                 `ENTIDAD_FEDERATIVA`,
                 `ABREVIATURA`,
                 `Muertes`) 
+
+# #promedios de muertes al día en cada estado
+# muertesXEstaXDia <- muertesXEstaXDia %>% 
+#   ungroup() %>% 
+#   group_by(`ENTIDAD_RES`) %>% 
+#   mutate(
+#     PROM=mean(MUERTES)
+#     
+#   ) 
+
 
 pruebasXEstado <- filtroPrueba  %>%
   group_by(`ENTIDAD_RES`) %>%
@@ -219,7 +360,7 @@ muerteXEstaXMillon <- ((1000000*muertesXEstado$Muertes)/poblacionEstado$pop)
 PositividadIndica <- (positivosXEstados$Positivos/pruebasXEstado$Pruebas)*100
 # Pruebas por mil habitantes  ---------------------------------------------
 
-pruebasXEstaXMilhab <- ((100*pruebasXEstado$Pruebas)/poblacionEstado$pop)
+pruebasXEstaXMilhab <- ((1000*pruebasXEstado$Pruebas)/poblacionEstado$pop)
 
 
 # Tabla con datos finales xEstado -------------------------------------------------
@@ -232,181 +373,64 @@ indicadoresFinal <- positivosXEstados %>%
   add_column(PositividadIndica) %>% 
   add_column(pruebasXEstaXMilhab)
 
+indicadoresFinal <- indicadoresFinal %>% 
+  ungroup() %>% 
+  group_by(`ENTIDAD_FEDERATIVA`) %>% 
+  mutate(
+    SUM= sum(`Positivos`,
+             `muertesXEstado$Muertes`,
+             posiXEstaXMillon,
+             muerteXEstaXMillon,
+             PositividadIndica,
+             pruebasXEstaXMilhab,
+             na.rm = TRUE),
+    PROM = (SUM/6)
+      ) 
 
-# Promedio movil por estado -----------------------------------------------
+PromIndica <- indicadoresFinal %>% 
+  dplyr::select(`ENTIDAD_RES`,
+                `ENTIDAD_FEDERATIVA`,
+                `PROM`)
+summary(PromIndica)
 
-#se genera un promedio movil de los úlimos 14 días más actualziados para cada estado
+# Normalización  ----------------------------------------------------------
 
-library(zoo)
-puebasMOVIL <- pruebasE.01
-
-as.numeric(nrow(pruebasE.01)-13):as.numeric(nrow(pruebasE.01))ç
-
-library(zoo)
-positivoE.01$sums <- rollsumr(positivoE.01$POSITIVOS, k = 14, fill = NA)
-pruebasE.01$promedio <- rollmean(pruebasE.01$PRUEBAS, k = 14, fill = NA, aling="rigth")
-
-
-pruebasE.02$sums <- rollsumr(pruebasE.02$PRUEBAS, k = 14, fill = NA)
-pruebasE.02$promedio <- rollmean(pruebasE.02$PRUEBAS, k = 14, fill = NA, aling="rigth")
+# library(caret)
+# 
+# 
+# preproc2 <- preProcess(PromIndica[,c(1:3)], method=c("range"))
+# 
+# norm2 <- predict(preproc2, PromIndica[,c(1:3)])
+# 
+# summary(norm2)
 
 
-pruebasE.13$sums <- rollsumr(pruebasE.13$PRUEBAS, k = 14, fill = NA)
-pruebasE.13$promedio <- rollmean(pruebasE.13$PRUEBAS, k = 14, fill = NA, aling="rigth")
-
-for(i in unique(positivosXEstaXDia$`ENTIDAD_RES`)) {
-  nam <- paste("positivoE", i, sep = ".")
-  data <- get(paste("positivoE",i,sep="."))
-  SUM <- 
-  assign(nam, positivosXEstaXDia[positivosXEstaXDia$`ENTIDAD_RES`==i,]) %>% 
-    pruebasE.i$sums <-rollsumr(pruebasE.i$PRUEBAS, k = 14, fill = NA) %>% 
-    pruebasE.i$promedio <- rollmean(pruebasE.i$PRUEBAS, k = 14, fill = NA, aling="rigth")
-  
+normalize <- function(x) {
+  return (((x - min(x))*(100) / (max(x) - min(x))))
 }
-
-pruebasE.01 %>% 
-  add_colum(rollsumr(pruebasE.01$PRUEBAS, k = 14, fill = NA)) %>% 
- add_colum(rollmean(pruebasE.01$PRUEBAS, k = 14, fill = NA, aling="rigth"))
-
-datalist <- list.files("muertesE", i, sep = ".")
-
-for (i in 1:32){
-  datalist <- paste("positivoE", i, sep = ".")
-  datalist[datalist$sums,] <-rollsumr(datalist[datalist$PRUEBAS,], k = 14, fill = NA) %>% 
-    datalist[datalist$promedio,] <- rollmean(datalist[datalist$PRUEBAS,], k = 14, fill = NA, aling="rigth")
+calificacion <- function(x) {
+  return (100-(((x - min(x))*(100) )/ (max(x) - min(x))))
 }
-
-for (i in 1:32){
-  datalist <- paste0("positivoE", i, sep = ".")
-  as.list(datalist)
-  datalist[["SUMS"]] <-rollsumr(datalist["POSITIVOS"], k = 14, fill = NA) 
-  datalist["promedio"] <- rollmean(datalist["POSITIVOS"], k = 14, fill = NA, aling="rigth")
-}
-
-for (i in 1:32){
-  datalist <- paste("positivoE", i, sep = ".")
-  datalist[datalist$SUMS] <-rollsumr(datalist[datalist$POSITIVOS], k = 14, fill = NA) 
-  datalist[datalist$promedio] <- rollmean(datalist[datalist$POSITIVOS], k = 14, fill = NA, aling="rigth")
-}
-
-i=01
-for (i in unique(positivosXEstaXDia$`ENTIDAD_RES`)){
-  dataname <- paste("positivoE", i, sep = ".")
-  datalist <- get(paste("positivoE", i, sep = "."))
-  assign(dataname, datalist[rollsumr(datalist$POSITIVOS, k = 14, fill = NA)])
-}
-
-# datalist <- list(positivoE.01,positivoE.02)
-for (i in unique(positivosXEstaXDia$`ENTIDAD_RES`)){
-  datalist <- paste0("positivoE.", i)
-  list()
-  add_column(datalist,
-         SUMS = rollsumr(datalist[POSITIVOS], k = 14, fill = NA),
-          # promedio <- rollmean(datalist$POSITIVOS, k = 14, fill = NA, aling="rigth")
-         )
-  # datalist$SUMS <-rollsumr(datalist$POSITIVOS, k = 14, fill = NA)
-  # datalist$promedio <- rollmean(datalist$POSITIVOS, k = 14, fill = NA, aling="rigth")
-}
-
-for (i in unique(positivosXEstaXDia$`ENTIDAD_RES`)){
-  datalist <- paste0("positivoE.", i)
-  datalist <- get(paste("positivoE", i, sep = "."))
-  assign(datalist["SUMS"],
-             rollsumr(datalist["POSITIVOS"], k = 14, fill = NA)
-             # promedio <- rollmean(datalist$POSITIVOS, k = 14, fill = NA, aling="rigth")
-  )
-  # datalist$SUMS <-rollsumr(datalist$POSITIVOS, k = 14, fill = NA)
-  # datalist$promedio <- rollmean(datalist$POSITIVOS, k = 14, fill = NA, aling="rigth")
-}
+PromIndica$NORM <- normalize(PromIndica$PROM)
+PromIndica$AVERAGE <- calificacion(PromIndica$PROM)
 
 
-for (i in unique(positivosXEstaXDia$`ENTIDAD_RES`)){
-  get(paste0("positivoE.", i))
-  (as.name(paste0("positivoE.", i)))$SUMS <-as.name(paste0("positivoE.", i)[rollsumr((as.name(paste0("positivoE.", i)))$POSITIVOS, k = 14, fill = NA)]
-  (as.name(paste0("positivoE.", i)))$promedio <- rollmean((as.name(paste0("positivoE.", i)))$POSITIVOS, k = 14, fill = NA, aling="rigth")
-}
+# Tabla Calificación  -----------------------------------------------------
 
-for (i in unique(positivosXEstaXDia$`ENTIDAD_RES`)){
-  get(paste0("positivoE.", i)) %>% 
-  SUMS <-rollsumr(get(paste0("positivoE.", i))$POSITIVOS, k = 14, fill = NA)
-  promedio <- rollmean(POSITIVOS, k = 14, fill = NA, aling="rigth")
-}
+calif <- PromIndica %>% 
+  dplyr::select(`ENTIDAD_FEDERATIVA`,
+                `AVERAGE`
+                ) %>% 
+  arrange(desc(AVERAGE))
 
-i=0
+  colnames(calif)[colnames(calif)=="ENTIDAD_FEDERATIVA"] <- "ESTADO"
 
-for (i in unique(positivosXEstaXDia$`ENTIDAD_RES`)){
-  datalist = list(get(paste0("positivoE.", i)))
-  # as.name(paste0("positivoE.", i)) <- get(paste0("positivoE.", i))
-  # names <- tibble(paste0("positivoE.", i))
-  datalist$SUMS <-rollsumr(datalist$POSITIVOS, k = 14, fill = NA)
-  datalist$promedio <- [rollmean(datalist$POSITIVOS, k = 14, fill = NA, aling="rigth")]
-  datalist=datalist+1
-}
+#Tabla que muestra el número de pruebas que se hacen por día en los estados
+formattable(calif, #llamo datos
+            align =c("l","c"), #Para alinear los datos de la tabla cada "" es una columna
+            list(`ESTADO` = formatter( #datos específicos
+              "span", style = ~ style(color = "grey",font.weight = "bold")),
+              `AVERAGE` = color_tile("transparent", "orange")# me crea una barra roja con proporción a los datos
+            )
+)
 
-
-datalist=list()
-for (i in unique(positivosXEstaXDia$`ENTIDAD_RES`)){
-  name = (get(paste0("positivoE.", i)))
-  datalist <- append(datalist,name)
-  # datalist$SUMS <-rollsumr(datalist$POSITIVOS, k = 14, fill = NA)
-  # datalist$promedio <- rollmean(datalist$POSITIVOS, k = 14, fill = NA, aling="rigth")
-  # positivoE.
-}
-
-mybiglist <- vector('list', 5)
-names(mybiglist) <- paste0('item:', seq_along(mybiglist))
-
-datalist <- list(1:32)
-
-for(i in unique(positivosXEstaXDia$`ENTIDAD_RES`)){
-  names(datalist) <- paste0('positivoE.', i)
-  data <- get(paste0("positivoE.",i))
-  datalist[[i]] <- data
-}
-
-#para hacer una lista de las bases de datos
-datalist <- list()
-for(i in unique(positivosXEstaXDia$`ENTIDAD_RES`)) {
-  name <- paste0('positivoE.', i)
-  data <- get(paste0('positivoE.', i))
-  datalist[[name]] <- data
-}
-
-for (j in datalist){
-  i <- j
-  na <- paste0(j)
-  i$SUMS <-rollsumr(i$POSITIVOS, k = 14, fill = NA)
-  i$promedio <- rollmean(i$POSITIVOS, k = 14, fill = NA, aling="rigth")
-  datalist[[na]] <- i
-}
-
-df1 <- data.frame(x = rep(3, 5), y = seq(1, 5, 1), ID = letters[1:5])
-df2 <- data.frame(x = rep(5, 5), y = seq(2, 6, 1), ID = letters[6:10])
-
-z=list(df1,df2)
-df=NULL
-for (i in z) {
-  # i$Avg=(i$x+i$y)/2
-  # df<-rbind(df,i)
-  # print (df)
-}
-
-# for(i in unique(positivosXEstaXDia$`ENTIDAD_RES`)){
-#   dat <- get(paste0('positivoE.', i))
-#   name <- paste0("promedio14E.",i)
-#   
-#   sum(dat$POSITIVOS, na.rm = TRUE))
-#   assign(name,dat[dat$POSITIVOS] )
-#   (nam, positivosXEstaXDia[positivosXEstaXDia$`ENTIDAD_RES`==i,])
-# }
-
-
-length()
-for(i in unique(positivosXEstaXDia$`ENTIDAD_RES`)) {
-  nam <- (paste("positivoE", i, sep = "."))
-  data <- get(paste0("positivoE.", i))
-  SUM <- rollsumr(data$POSITIVOS, k = 14, fill = NA)
-  PRO <- rollmean(data$POSITIVOS, k = 14, fill = NA, aling="rigth")
-  data[nam] <- add_column(SUM)
-  
-}

@@ -11,6 +11,10 @@ output:
 ```{r setup, include=FALSE}
 library(flexdashboard)
 # library(knitr)
+
+#integrar visualización
+library(patchwork)
+
 library(DT)
 library(rpivotTable)
 library(ggplot2)
@@ -20,13 +24,14 @@ library(openintro)
 library(highcharter)
 library(ggvis)
 library(tidyverse)
-library(lubridate)
 # library(tibbletime)
 library(reactable)
 library(htmltools)
-library(tsibble)
+library(fpp3)
 library(feasts)
 library(fable)
+library(tsibble)
+library(lubridate)
 library(kableExtra)
 library(formattable)
 #importación y lectura
@@ -289,10 +294,13 @@ p5 <- delitos_tidy_tsbl %>%
 p5
 ```
 
-Map
+Mapa nacional 1 y pruebas realizadas
 ========================================
 
-### Map
+Row
+------------------------------------
+
+### Mapa nacional de resultados positivos 
 
 ```{r}
 # car <- data %>%
@@ -422,74 +430,766 @@ addProviderTiles("CartoDB.Positron")
 
 ```
 
-Data Table
-========================================
+
+Row
+------------------------------------
+
+### Pruebas realizadas por estado 
 
 ```{r}
-datatable(data,
-          caption = "Failure Data",
-          rownames = T,
-          filter = "top",
-          options = list(pageLength = 25))
+# # Importación de datos ----------------------------------------------------
+# 
+# 
+# # Datosmex2502 <- read_csv("210225COVID19MEXICO.csv")
+# # Descarga de datos desde la página web
+# fecha <- "210412"
+# options(timeout = 600)
+# temp <- tempfile()
+# download.file("http://datosabiertos.salud.gob.mx/gobmx/salud/datos_abiertos/datos_abiertos_covid19.zip", temp)
+# 
+# 
+# Datosmex2502 <- vroom::vroom(unz(temp, paste0(fecha,"COVID19MEXICO.csv")))
+# unlink(temp)
+# 
+# 
+# Entidades <- read_xlsx("Datos nacionales abiertos/201128 Catalogos.xlsx",sheet="Catálogo de ENTIDADES")
+# # Clásificación  ----------------------------------------------------------
+# 
+# #datos necesarios para la prueba
+# datosimportates <- dplyr::select(Datosmex2502,`FECHA_INGRESO`,`ENTIDAD_RES`,
+#                                  `TOMA_MUESTRA_LAB`,`RESULTADO_LAB`, `TOMA_MUESTRA_ANTIGENO`,
+#                                  `RESULTADO_ANTIGENO`, `CLASIFICACION_FINAL`)%>%
+#   left_join(Entidades, by=c("ENTIDAD_RES"="CLAVE_ENTIDAD"))
+
+
+#datos de las pruebas realizadas ese día en todo el país
+pruebasfiltro <- datosimportates %>% 
+  dplyr::filter(`TOMA_MUESTRA_LAB`== 1 | `TOMA_MUESTRA_ANTIGENO`==1 ) %>% 
+  dplyr::select(`FECHA_INGRESO`, `ENTIDAD_RES`,`ENTIDAD_FEDERATIVA`,`ABREVIATURA`) %>% 
+  mutate(
+    year = lubridate::year(FECHA_INGRESO),
+    month = lubridate::month(FECHA_INGRESO),
+    day = lubridate::day(FECHA_INGRESO)
+  ) %>% 
+  drop_na(`ENTIDAD_FEDERATIVA`, `FECHA_INGRESO`) 
+  
+
+
+# Agrupación de datos  ----------------------------------------------------
+
+#Numero de pruebas por estado totales hasta la fecha de datos
+pruebasXEstado <- pruebasfiltro %>%
+  group_by(`ENTIDAD_FEDERATIVA`) %>%
+  mutate(`Numero de pruebas`=n()) %>%
+  distinct(`ENTIDAD_FEDERATIVA`, .keep_all = TRUE) %>%
+  arrange(`ENTIDAD_FEDERATIVA`) %>% 
+  drop_na(`ENTIDAD_FEDERATIVA`) 
+
+pruebasXEstado <- pruebasXEstado %>% 
+  dplyr::select(
+    `ENTIDAD_FEDERATIVA`,
+    `Numero de pruebas`
+  )
+
+pruebasfiltro$FECHA_INGRESO <- format(pruebasfiltro$FECHA_INGRESO, "%Y-%m")
+
+
+#Numero de pruebas por estado según el día 
+pruebasxEstadoxDia <- pruebasfiltro %>%
+  group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
+  mutate(count=n()) %>%
+  distinct(`ENTIDAD_RES`, .keep_all = TRUE) %>% 
+  arrange(`ENTIDAD_RES`) %>% 
+  drop_na(`ENTIDAD_FEDERATIVA`) 
+
+  
+  
+  
+  
+
+# Gráfica  ----------------------------------------------------------------
+
+
+ggplot(data = pruebasfiltro) +
+  geom_bar(mapping = aes(y = FECHA_INGRESO, fill = ABREVIATURA), position = "dodge")
+
 ```
 
-Pivot Table
+### Pruebas realizadas por estado 
+
+```{r}
+
+# Tabla  ------------------------------------------------------------------
+
+#Tabla que muestra el número de pruebas que se hacen por día en los estados
+formattable(pruebasXEstado, #llamo datos
+            align =c("l","c"), #Para alinear los datos de la tabla cada "" es una columna
+            list(`ENTIDAD_FEDERATIVA` = formatter( #datos específicos
+              "span", style = ~ style(color = "grey",font.weight = "bold")),
+              `Numero de pruebas` = color_bar("Red") # me crea una barra roja con proporción a los datos
+            )
+)
+
+
+
+
+
+
+```
+
+
+
+Mapa porcentaje de positividad 
+========================================
+Row
+------------------------------------
+
+### Porcentaje total 
+
+```{r}
+
+# Importación de datos ----------------------------------------------------
+
+#Datosmex2502 <- read_csv("210225COVID19MEXICO.csv")
+# Descarga de datos desde la página web
+# fecha <- "210414"
+# options(timeout = 700)
+# temp <- tempfile()
+# download.file("http://datosabiertos.salud.gob.mx/gobmx/salud/datos_abiertos/datos_abiertos_covid19.zip", temp)
+# 
+# 
+# Datosmex2502 <- vroom::vroom(unz(temp, unzip(temp, list = TRUE) %>% pull(Name)))
+# unlink(temp)
+# 
+# 
+# Entidades <- read_xlsx("Datos nacionales abiertos/201128 Catalogos.xlsx",sheet="Catálogo de ENTIDADES")
+# 
+# # Clasificación de datos  -------------------------------------------------
+# 
+# #datos necesarios para la prueba
+# datosimportates <- dplyr::select(Datosmex2502,`FECHA_INGRESO`,`ENTIDAD_RES`,
+#                           `TOMA_MUESTRA_LAB`,`RESULTADO_LAB`, `TOMA_MUESTRA_ANTIGENO`,
+#                           `RESULTADO_ANTIGENO`, `CLASIFICACION_FINAL`)%>%
+#   left_join(Entidades, by=c("ENTIDAD_RES"="CLAVE_ENTIDAD"))
+# 
+# 
+# 
+# #datos confirmados sin realización de pruebas
+# confirmados <- datosimportates %>%
+#   filter(`CLASIFICACION_FINAL`%in% c(1,2,3)) %>%
+#   dplyr::select(`FECHA_INGRESO`, `ENTIDAD_RES`, `ENTIDAD_FEDERATIVA`, `ABREVIATURA`) %>%
+#   mutate(
+#     year = lubridate::year(FECHA_INGRESO),
+#     month = lubridate::month(FECHA_INGRESO),
+#     day = lubridate::day(FECHA_INGRESO)
+#   ) %>%
+#   drop_na(`ENTIDAD_FEDERATIVA`, `FECHA_INGRESO`)
+
+#datos de las pruebas realizadas ese día en todo el país
+pruebasfiltro <- datosimportates %>% 
+  dplyr::filter(`TOMA_MUESTRA_LAB`== 1 | `TOMA_MUESTRA_ANTIGENO`==1 ) %>% 
+  dplyr::select(`FECHA_INGRESO`, `ENTIDAD_RES`,`ENTIDAD_FEDERATIVA`,`ABREVIATURA`) %>% 
+  mutate(
+    year = lubridate::year(FECHA_INGRESO),
+    month = lubridate::month(FECHA_INGRESO),
+    day = lubridate::day(FECHA_INGRESO)
+  ) %>% 
+  drop_na(`ENTIDAD_FEDERATIVA`, `FECHA_INGRESO`) 
+
+
+#Separación de datos por fechas para mapas
+pruebas2020 <- dplyr::filter(pruebasfiltro, year==2020)
+pruebEstado2020 <- pruebas2020 %>% 
+  group_by(`ENTIDAD_RES`) %>% 
+  summarise(
+    count=n()
+  )
+
+pruebas2021 <- dplyr::filter(pruebasfiltro, year==2021)
+pruebEstado2021 <- pruebas2021 %>% 
+  group_by(`ENTIDAD_RES`) %>% 
+  summarise(
+    count=n()
+  )
+#confirmados por año para mapas
+confirm2020 <- confirmados %>% 
+  dplyr::filter( year==2020) %>% 
+  drop_na(`ENTIDAD_FEDERATIVA`)
+confirmEstado2020 <- confirm2020 %>% 
+  group_by(`ENTIDAD_RES`) %>% 
+  summarise(
+    count=n()
+  )
+
+confirm2021 <- confirmados %>% 
+  dplyr::filter( year==2021) %>% 
+  drop_na(`ENTIDAD_FEDERATIVA`)
+confirmEstado2021 <- confirm2021 %>% 
+  group_by(`ENTIDAD_RES`) %>% 
+  summarise(
+    count=n()
+    
+  )
+
+
+#Numero de pruebas por estado totales hasta la fecha de datos
+pruebasXEstado <- pruebasfiltro %>%
+  group_by(`ENTIDAD_RES`) %>%
+  mutate(PRUEBAS=n()) %>%
+  distinct(`ENTIDAD_RES`, .keep_all = TRUE) %>%
+  arrange(`ENTIDAD_RES`) %>% 
+  drop_na() 
+
+
+# #Numero de pruebas por estado según el día 
+# pruebasxEstadoxDia <- pruebasfiltro %>%
+#   group_by(`ENTIDAD_RES`,`FECHA_INGRESO`) %>%
+#   mutate(count=n()) %>%
+#   distinct(`ENTIDAD_RES`, .keep_all = TRUE) %>% 
+#   arrange(`ENTIDAD_RES`) %>% 
+#   drop_na() 
+#   
+# 
+#  prubeasXEstadotsbl <- pruebasxEstadoxDia %>%
+#    as_tsibble( key = `ENTIDAD_RES`,
+#               index = `FECHA_INGRESO`
+#    )
+
+# group_split(pruebasxEstadoxDia)
+# group_keys(pruebasxEstadoxDia)
+
+#Positivos por estado totales hasta la fecha de datos
+positivoxEstado <- confirmados %>%
+  group_by(`ENTIDAD_RES`) %>%
+  mutate(CONFIRMADOS=n()) %>%
+  distinct(`ENTIDAD_RES`, .keep_all = TRUE) %>%
+  arrange(`ENTIDAD_RES`) %>% 
+  dplyr::select(ENTIDAD_RES, ENTIDAD_FEDERATIVA, CONFIRMADOS )
+
+# #Positivos por estado según el día 
+# positivoxEstadoxDia <- confirmados %>%
+#   group_by(`ENTIDAD_RES`, `FECHA_INGRESO`) %>%
+#   mutate(count=n()) %>%
+#   distinct(`ENTIDAD_RES`, .keep_all = TRUE) %>% 
+#   arrange(`ENTIDAD_RES`) %>% 
+#   drop_na()
+# 
+# positivoXDiatsbl <- positivoxEstadoxDia %>%
+#   as_tsibble( key = ENTIDAD_RES,
+#              index = FECHA_INGRESO
+#              
+#   )
+
+
+#Selección de nombre estados, por orden de codigo
+nombreEstado <- Entidades %>%
+  dplyr::select(`ENTIDAD_FEDERATIVA`) %>%
+  slice( 1:32)
+  
+
+
+# Agrupación de datos totales -----------------------------------------------------
+
+# #suma total de las pruebas realizadas
+totalpruebas <- pruebasXEstado$PRUEBAS %>%
+  sum(na.rm = TRUE)
+
+#suma total de las pruebas que salieron positivas
+totalpositivas <- positivoxEstado$CONFIRMADOS %>%
+  sum(na.rm = TRUE)
+
+#Porcentaje por estado de las pruebas positivas a el total de pruebas realizadas en los estados
+positividadPais <- (totalpositivas/totalpruebas)*100
+#positividadPais
+
+positividad <- ((positivoxEstado$CONFIRMADOS/pruebasXEstado$PRUEBAS)*100)
+#positividad
+
+#porcentaje total de las pruebas positivas de acuerdo a que estado. 
+porcenestado <- (positivoxEstado$CONFIRMADOS/totalpositivas)*100
+porcenestado <- as.numeric(porcenestado) 
+#porcenestado
+
+#Porcentaje total de pruebas positvas
+porcen <- sum(positividad, na.rm = TRUE) 
+
+#verificación de suma de porcentaje de pruebas positivas (porcenestado)
+sumporcentaje <- sum(porcenestado, na.rm = TRUE)
+
+# creamos tibble con datos de codigo de entidad y casos positivos
+nueva <- positivoxEstado %>% 
+  #agregamos porcentajes de acuerdo al total de pruebas positivas
+  add_column(porcenestado)%>% 
+  #agregamos porcentajes del total de pruebas
+  add_column(positividad) %>% 
+  add_column(pruebasXEstado$PRUEBAS)
+  # #Agregamos el nombre de los estados por orden de codigo
+  # add_column(nombreEstado) 
+
+# Agrupación de datos 2020 ------------------------------------------------
+
+# #suma total de las pruebas realizadas
+# totalpruebas2020 <- pruebEstado2020$count %>%
+#   sum(na.rm = TRUE)
+
+#suma total de las pruebas que salieron positivas
+totalpositivas2020 <- confirmEstado2020$count %>%
+  sum(na.rm = TRUE)
+
+#Porcentaje por estado de las pruebas positivas a el total de pruebas realizadas en los estados
+positividad2020 <- (confirmEstado2020$count/pruebEstado2020$count)*100
+#positividad2020
+
+#porcentaje total de las pruebas positivas de acuerdo a que estado. 
+porcenestado2020 <- (confirmEstado2020$count/totalpositivas2020)*100
+porcenestado2020 <- as.numeric(porcenestado) 
+#porcenestado2020
+
+#Porcentaje total de pruebas positvas
+porcen2020 <- sum(positividad2020, na.rm = TRUE) 
+
+#verificación de suma de porcentaje de pruebas positivas (porcenestado)
+sumporcentaje2020 <- sum(porcenestado2020, na.rm = TRUE)
+
+# creamos tibble con datos de codigo de entidad y casos positivos
+nueva2020 <- confirmEstado2020 %>% 
+  #agregamos porcentajes de acuerdo al total de pruebas positivas
+  add_column(porcenestado2020)%>% 
+  #agregamos porcentajes del total de pruebas
+  add_column(positividad2020) %>% 
+  #Agregamos el nombre de los estados por orden de codigo
+  add_column(nombreEstado)
+
+# Agrupación de datos 2021 ------------------------------------------------
+# #suma total de las pruebas realizadas
+# totalpruebas2021 <- pruebEstado2021$count %>%
+#   sum(na.rm = TRUE)
+
+#suma total de las pruebas que salieron positivas
+totalpositivas2021 <- confirmEstado2021$count %>%
+  sum(na.rm = TRUE)
+
+#Porcentaje por estado de las pruebas positivas a el total de pruebas realizadas en los estados
+positividad2021 <- (confirmEstado2021$count/pruebEstado2021$count)*100
+#positividad2021
+
+#porcentaje total de las pruebas positivas de acuerdo a que estado. 
+porcenestado2021 <- (confirmEstado2021$count/totalpositivas2021)*100
+porcenestado2021 <- as.numeric(porcenestado2021) 
+#porcenestado2021
+
+#Porcentaje total de pruebas positvas
+porcen2021 <- sum(positividad2021, na.rm = TRUE) 
+
+#verificación de suma de porcentaje de pruebas positivas (porcenestado)
+sumporcentaje2021 <- sum(porcenestado2021, na.rm = TRUE)
+
+# creamos tibble con datos de codigo de entidad y casos positivos
+nueva2021 <- confirmEstado2021 %>% 
+  #agregamos porcentajes de acuerdo al total de pruebas positivas
+  add_column(porcenestado2021)%>% 
+  #agregamos porcentajes del total de pruebas
+  add_column(positividad2021) %>% 
+  #Agregamos el nombre de los estados por orden de codigo
+  add_column(nombreEstado)
+
+# Mapa de positividad total --------------------------------------------------------------------
+
+# de acuerdo al número de pruebas realizadas se calcula el porcentaje de las 
+#pruebas que fueron seleccionadas como positivas. (por estado)
+#data(nueva)
+nueva$value <- nueva$positividad
+nueva$region <- nueva$ENTIDAD_RES
+# mxstate_choropleth(nueva,
+#                    num_colors = 1,
+#                    title = "Porcentaje de casos positivos",
+#                    legend = "%",
+# )
+
+#Mapa interactivo
+bins = c(15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51, 54, 57, 60, 63, 66, 69, 72)
+pal <- colorBin("viridis", domain = nueva$value, bins=bins)
+mxstate_leaflet(nueva,
+                pal,
+                ~ pal(value),
+                ~ sprintf("Estado: %s<br/>Porcentaje de positividad : %s",
+                         ENTIDAD_FEDERATIVA , comma(value)  )) %>%
+  addLegend(position = "bottomright", 
+            pal = pal, 
+            values = nueva$value,
+            title = "Percentaje<br>Positividad",
+            labFormat = labelFormat(suffix = "%",
+                                    )) %>%
+  addTiles() %>%
+  addMarkers(50, 50) %>%
+  addControl("Mapa positividad de las pruebas totales", position = "bottomleft") %>%
+  addProviderTiles("CartoDB.Positron")
+
+
+```
+
+Row
+------------------------------------
+
+### Porcentaje 2020
+
+```{r}
+ # Mapa 2020 ---------------------------------------------------------------
+# de acuerdo al número de pruebas realizadas se calcula el porcentaje de las 
+#pruebas que fueron seleccionadas como positivas. (por estado del año 2020)
+data(nueva2020)
+nueva2020$value <- nueva2020$positividad2020
+nueva2020$region <- nueva2020$ENTIDAD_RES
+# mxstate_choropleth(nueva,
+#                    num_colors = 1,
+#                    title = "Porcentaje de casos positivos",
+#                    legend = "%",
+# )
+
+#Mapa interactivo
+bins=c(15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51, 54, 57, 60, 63, 66, 69, 72)
+pal <- colorBin("viridis", domain = nueva2020$value, bins=bins)
+mxstate_leaflet(nueva2020,
+                pal,
+                ~ pal(value),
+                ~ sprintf("Estado: %s<br/>Porcentaje de positividad : %s",
+                          ENTIDAD_FEDERATIVA , comma(value)  )) %>%
+  addLegend(position = "bottomright", 
+            pal = pal, 
+            values = nueva2020$value,
+            title = "Percentaje<br>Positividad",
+            labFormat = labelFormat(suffix = "%",
+            )) %>%
+  addTiles() %>%
+  addMarkers(50, 50) %>%
+  addControl("Mapa positividad de las pruebas en 2020", position = "bottomleft") %>% 
+  addProviderTiles("CartoDB.Positron")
+
+
+```
+
+### Porcentaje 2021
+```{r}
+
+
+
+# Mapa 2021 ---------------------------------------------------------------
+# de acuerdo al número de pruebas realizadas se calcula el porcentaje de las 
+#pruebas que fueron seleccionadas como positivas. (por estado del año 2021)
+data(nueva2021)
+nueva2021$value <- nueva2021$positividad2021
+nueva2021$region <- nueva2021$ENTIDAD_RES
+# mxstate_choropleth(nueva2021,
+#                    num_colors = 1,
+#                    title = "Porcentaje de casos positivos",
+#                    legend = "%",
+# )
+
+#Mapa interactivo
+bins = c(15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51, 54, 57, 60, 63, 66, 69, 72)
+pal <- colorBin("viridis", domain = nueva2021$value, bins=bins)
+mxstate_leaflet(nueva2021,
+                pal,
+                ~ pal(value),
+                ~ sprintf("Estado: %s<br/>Porcentaje de positividad : %s",
+                          ENTIDAD_FEDERATIVA , comma(value)  )) %>%
+  addLegend(position = "bottomright", 
+            pal = pal, 
+            values = nueva2021$value,
+            title = "Percentaje<br>Positividad",
+            labFormat = labelFormat(suffix = "%",
+            )) %>%
+  addTiles() %>%
+  addMarkers(50, 50) %>%
+  addControl("Mapa positividad de pruebas en 2021", position = "bottomleft") %>% 
+  addProviderTiles("CartoDB.Positron")
+
+
+```
+```{r}
+
+# Carga de datos ----------------------------------------------------------
+
+#Se importan los datos como un tibble
+Vacunastotales <- readr::read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations.csv")
+
+
+# Wrangle data ------------------------------------------------------------
+
+
+#Se quiere trabajar con series de tiempo, entonces convertimos
+# a tsibble un objeto que tiene orientación a este tiempo de 
+#procesamiento 
+Vacunastotales_tsibble <- Vacunastotales %>%
+  dplyr::mutate(Daily = as.Date(date)) %>%
+  dplyr::select(-date) %>%
+  tsibble::as_tsibble(key = location,
+             index = Daily)
+
+#se hace una variable con los nombres de los paises de
+#LATAM para asi poder llamar la variable a buscar en
+#la base de datos si se requiere, esto esta pensado
+#en que la instrucción podría hacerse varias veces 
+#entonces en teoría debería simplificar el código
+  latam <- c("Mexico", "Argentina", 
+           "Colombia", "Chile", 
+           "Brazil", "Bolivia", 
+           "Costa Rica", "Ecuador",
+           "Guatemala", "Panama", 
+           "Paraguay", "Peru", 
+           "Puerto Rico", "Dominican Republic")
+  
+  #Se encontro que era particularmente complicado mostrar 
+  #todos los datos en una sola gráfica, por lo tanto,
+  #graficar por secciones y pegar con patchwork es una
+  #opción viable, por lo que la variable length(latam) = 14
+  #entonces dividimos en 2 grupos para tener símetria.
+  
+  latam1 <- latam[1:7]
+  latam2 <- latam[8:14]
+#latam == latam1 + latam2
+  
+  
+#hacemos otro dafa frame que solo sea para los de 
+#LATAM y asi trabajamos con un tsibble más pequeña
+Vacunas_latam_tsibble <- Vacunastotales_tsibble %>%
+  dplyr::select( Daily, location, total_vaccinations, 
+          total_vaccinations_per_hundred, 
+          daily_vaccinations_per_million) %>%
+  filter(location %in% latam)
+
+
+```
+
+Vacunación en LATAM
 =========================================
 
-```{r}
-rpivotTable(data,
-            aggregatorName = "Count",
-            cols= "fm",
-            rows = "State",
-            rendererName = "Heatmap")
-```
+Row
+------------------------------------
 
-Summary {data-orientation=columns} 
-===========================================
-
-Column 
------------------------------------
-
-### Max Failure Month
+### Escenario general
 
 ```{r}
-valueBox(max(data$fm),
-         icon = "fa-user" )
+
+#Gráfica que representa el escenario general para los paises 
+#de latam en el tiempo vacunados por cada 100 
+EscenarioLatam <- ggplot(data = Vacunas_latam_tsibble) + 
+  geom_line(mapping = aes(x = Daily, y = total_vaccinations_per_hundred, color = location)) +
+  labs(x = 'meses',
+         y = 'Vacunas aplicadas por cada 100')
+
+plotly::ggplotly(EscenarioLatam) 
+
+#Notas de el gráifco EscenarioLatam 
+#muestra una tendencia creciente
+#con temporalidad variable
+#No hay evidencia de comportmaiento ciclico 
+
+
 ```
 
-### Average Labor cost
+
+### Temporalidad (Mensual)
+
 ```{r}
-valueBox(round(mean(data$lc),
-               digits = 2),
-         icon = "fa-area-chart")
+# #Visualización por periocidad -------------------------------------------
+
+#Utilizando la función gg_season para hacer graficas
+#de la vacunación (2 gráficas por pais correspondiente a los
+# 2 años de los que se tienen datos) por mes. 
+
+Vacunas_latam_tsibble %>%
+  filter(location %in% latam1) %>%
+  gg_season(total_vaccinations_per_hundred, labels = "both") +
+  labs(y = "Vacunas aplicadas por cada 100",
+       x = "Meses",
+       title = "Vacunación por meses en los diferentes paises de LATAM") +
+  expand_limits(x = ymd(c("2021-02","2021-04"))) -> g1
+
+
+#se repite el codigo para hacer lo mismo y luego juntarlos 
+#con el apoyo de patch work
+Vacunas_latam_tsibble %>%
+  filter(location %in% latam2) %>%
+  gg_season(total_vaccinations_per_hundred, labels = "both") +
+  labs(y = "Vacunas aplicadas por cada 100",
+       x = "Meses",
+       title = "Vacunación por meses en los diferentes paises de LATAM") +
+  expand_limits(x = ymd(c("2021-02","2021-04"))) -> g2
+#No se estiliza que la asignación vaya hasta el final
+#pues transgrede con el estilo del código, pero se recomienda
+#en el libro de forescasting para darle "fluidez" a la lectura
+#del código
+
+#Se encuentra interesante que en marzo la mayoría de los paises
+#tienen una linea constante
+#Méxio y chile empezaron la vacunación en las últimas semanas
+#de diciembre 
+
+# Visualización: Integración de los gráficos con PATCHWORK  -----------------------------
+
+#Establecemos un layout, que es basicamente un # para los espacios en blanco, y letras 
+#para los lugares que deseamos que ocupe la letra
+layout <- '
+AAAABBBB
+AAAABBBB
+AAAABBBB
+'
+#cambiamos el lugar de las letras en el layout por nuestrras gráficas
+wrap_plots(A = g1,
+           B = g2,
+           design = layout)
+
+
 ```
 
-### Average Mileage at Failure
+### Temporalidad (semanal por mes)
+```{r}
+
+
+#Aquí vemos las gráficas anteriores más a detalle, pues podemos
+#ver en que semanas de cada mes hay crecimiento 
+Vacunas_latam_tsibble %>% 
+  filter(location %in% latam1) %>%
+  gg_season(total_vaccinations_per_hundred, period = "month") +
+  labs(y = "Vacunas aplicadas por cada 100",
+       x = "Periodicidad de las semanas del mes",
+       title = " Vacunación por semanana de los diferentes meses en los paises de LATAM") +
+expand_limits(x = ymd(c("2021-02","2021-04"))) -> g3
+
+
+#repetimos el código para la sección 2
+Vacunas_latam_tsibble %>% 
+  filter(location %in% latam2) %>%
+  gg_season(total_vaccinations_per_hundred, period = "month") +
+  labs(y = "Vacunas aplicadas por cada 100",
+       x = "Periodicidad de las semanas del mes",
+       title = " Vacunación por semanana de los diferentes meses en los paises de LATAM") + 
+expand_limits(x = ymd(c("2021-02","2021-04"))) -> g4
+
+# Visualización: Integración de los gráficos con PATCHWORK  -----------------------------
+
+#Establecemos un layout, que es basicamente un # para los espacios en blanco, y letras 
+#para los lugares que deseamos que ocupe la letra
+layout <- '
+AAAABBBB
+AAAABBBB
+AAAABBBB
+'
+#cambiamos el lugar de las letras en el layout por nuestrras gráficas
+wrap_plots(A = g3,
+           B = g4,
+           design = layout)
+
+
+```
+
+Row
+------------------------------------
+
+### Pronósticos
 
 ```{r}
-valueBox(round(mean(data$Mileage), digits = 2),
-         icon = "fa-area-chart")
+
+# Definición del modelo ---------------------------------------------------
+
+
+#TSLM(total_vaccinations_per_hundred ~ trend())
+
+
+# Entrenamiento del modelo (Estimación) -----------------------------------
+
+fit <- Vacunas_latam_tsibble %>%
+  model(Modelo_tendencia = 
+          TSLM(total_vaccinations_per_hundred ~ trend()))
+#fit
+
+
+# Revisar el desempeño del modelo (evaluación) ----------------------------
+
+
+# Producir pronósticos ----------------------------------------------------
+
+#Se genera la tabla de pronósticos, el cual va ser
+#una tabla de tipo fable (objeto) es decir
+#forecasting table
+fcst <- fit %>% forecast(h = 3) #se hace para los siguientes 3 meses
+                                #pues los datos que se tienen hasta el momento
+                                # son de 4 - 5 meses
+#fcst
+
+# Visualización de la forecasting table
+
+#para grupo 1 latama
+
+fcst %>%
+  filter(location %in% latam1) %>%
+  autoplot(Vacunas_latam_tsibble) +
+  ggtitle('Vacunas en LATAM') + 
+  ylab('Vacunas aplicadas por cada 100') +
+  xlab('Mes') -> fcst1
+
+#para grupo 2 latam
+
+fcst %>%
+  filter(location %in% latam2) %>%
+  autoplot(Vacunas_latam_tsibble) +
+  ggtitle('Vacunas en LATAM') + 
+  ylab('Vacunas aplicadas por cada 100') + 
+  xlab('Mes') -> fcst2
+
+#integración de las visualizaciones
+
+fcst3 = fcst1 + fcst2 
+fcst3
 ```
 
-Column
----------------------------
+<!-- Summary {data-orientation=columns}  -->
+<!-- =========================================== -->
 
-Report
+<!-- Column  -->
+<!-- ----------------------------------- -->
 
-* This is a report on `r length(data$fm)` car failures.
+<!-- ### Max Failure Month -->
 
-* The average labor cost was `r mean(data$lc)`.
+<!-- ```{r} -->
+<!-- valueBox(max(data$fm), -->
+<!--          icon = "fa-user" ) -->
+<!-- ``` -->
 
-* The average material cost was `r mean(data$mc)`.
+<!-- ### Average Labor cost -->
+<!-- ```{r} -->
+<!-- valueBox(round(mean(data$lc), -->
+<!--                digits = 2), -->
+<!--          icon = "fa-area-chart") -->
+<!-- ``` -->
 
-This report was generated on `r format(Sys.Date(), format = "%B %d, %Y")`.
+<!-- ### Average Mileage at Failure -->
 
-About Report
-========================================
+<!-- ```{r} -->
+<!-- valueBox(round(mean(data$Mileage), digits = 2), -->
+<!--          icon = "fa-area-chart") -->
+<!-- ``` -->
 
-Created by: Data Scientist at ABC
+<!-- Column -->
+<!-- --------------------------- -->
 
-Confidential: HIGHLY!
+<!-- Report -->
+
+<!-- * This is a report on `r length(data$fm)` car failures. -->
+
+<!-- * The average labor cost was `r mean(data$lc)`. -->
+
+<!-- * The average material cost was `r mean(data$mc)`. -->
+
+<!-- This report was generated on `r format(Sys.Date(), format = "%B %d, %Y")`. -->
+
+<!-- About Report -->
+<!-- ======================================== -->
+
+<!-- Created by: Data Scientist at ABC -->
+
+<!-- Confidential: HIGHLY! -->
 
 
 
