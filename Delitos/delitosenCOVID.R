@@ -93,20 +93,20 @@ delitos_violencia_familiar_gg <- delitos_tidy_tsbl %>%
 
 incidencias <- delitos_tidy_tsbl %>% 
   group_by_key() %>% 
-  index_by(Año = year(Fecha)) %>% 
+  index_by(Anual = year(Fecha)) %>% 
   summarise(Cuenta = sum(Cuenta)) %>% 
   as_tibble(incidencias) %>% 
   mutate(cambio = (Cuenta / lag(Cuenta) - 1)*100) %>% 
-  filter(Año != 2021)
+  filter(Anual != 2021)
 
 Todos_delitos_gg <- incidencias %>% 
-  ggplot(aes(x = Año, y = Cuenta, color = Tipo_de_delito)) +
+  ggplot(aes(x = Anual, y = Cuenta, color = Tipo_de_delito)) +
   geom_line(size = 1)+
   facet_wrap(~ Tipo_de_delito, scales = "free_y") +
   theme(legend.position = "none")
 
 perc_cambio_incidencias <- incidencias %>%
-  ggplot(aes(x = Año, y = cambio, color = Subtipo_de_delito)) +
+  ggplot(aes(x = Anual, y = cambio, color = Subtipo_de_delito)) +
   geom_line() +
   geom_line(size = 1)+
   facet_wrap(~ Subtipo_de_delito, scales = "free_y") +
@@ -114,10 +114,10 @@ perc_cambio_incidencias <- incidencias %>%
 plotly::ggplotly(perc_cambio_incidencias)
 
 incidencias <- incidencias %>% 
-  pivot_wider(names_from = Año, values_from = Cuenta:cambio)
+  pivot_wider(names_from = Anual, values_from = Cuenta:cambio)
 
 Tabla <- incidencias %>%
-  select( Subtipo_de_delito, Cuenta_2019, Cuenta_2020, cambio_2020) %>%
+  dplyr::select( Subtipo_de_delito, Cuenta_2019, Cuenta_2020, cambio_2020) %>%
   arrange(-cambio_2020) %>%
   transmute('Tipo de delito' = Subtipo_de_delito,
             'Incidencia en 2019' = Cuenta_2019,
@@ -132,7 +132,7 @@ customRed = "#ff7f7f"
 
 cambio_format <- 
   formatter("span", 
-            style = x ~ style(
+            style = x ~ formattable::style(
               font.weight = "bold",
               color = ifelse(x < 0, customGreen, ifelse(x > 0, customRed, "black"))),
             x ~ icontext(ifelse(x>0, "arrow-up", "arrow-down"), x)
@@ -140,7 +140,7 @@ cambio_format <-
 
 formattable(Tabla, 
             align = c("l", rep("r", NCOL(Tabla) - 1)),
-            list('Tipo de delito' = formatter("span", style = ~ style(color = "grey", font.weight = "bold")),
+            list('Tipo de delito' = formatter("span", style = ~ formattable::style(color = "grey", font.weight = "bold")),
                  'Porcentaje de cambio' = cambio_format
             ))
  
