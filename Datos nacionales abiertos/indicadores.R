@@ -109,11 +109,11 @@ positivos_tsbl <- positivosXEstaXDia %>%
     `14-MA` = slider::slide_dbl(POSITIVOS, mean,
                                .before = 14, .complete = TRUE)
   )
-#gráfica de los positivos con la medi movil
-positivos_tsbl %>% 
+# gráfica de los positivos con la medi movil
+positivos_tsbl %>%
   feasts::autoplot(POSITIVOS) +
   geom_line(aes(y = `14-MA`), color = "black") +
-  facet_wrap(~ ENTIDAD_FEDERATIVA, scales = "free_y") + 
+  facet_wrap(~ ENTIDAD_FEDERATIVA, scales = "free_y") +
   theme(legend.position = "none")
 
 
@@ -124,7 +124,7 @@ muertesXEstaXDia <- muertesConfirm %>%
   mutate(MUERTES=n()) %>%
   distinct(`FECHA_INGRESO`, .keep_all = TRUE) %>%
   arrange(`FECHA_INGRESO`) %>% 
-  select(`FECHA_INGRESO`,
+  dplyr::select(`FECHA_INGRESO`,
          `ENTIDAD_RES`,
          `ENTIDAD_FEDERATIVA`,
          `FECHA_DEF`,
@@ -146,11 +146,11 @@ muertes_tsbl <- muertesXEstaXDia %>%
     `14-MA` = slider::slide_dbl(MUERTES, mean,
                                 .before = 14, .complete = TRUE)
   )
-#gráfica de los positivos con la medi movil
-muertes_tsbl %>% 
+# #gráfica de los positivos con la medi movil
+muertes_tsbl %>%
   feasts::autoplot(MUERTES) +
   geom_line(aes(y = `14-MA`), color = "black") +
-  facet_wrap(~ ENTIDAD_FEDERATIVA, scales = "free_y") + 
+  facet_wrap(~ ENTIDAD_FEDERATIVA, scales = "free_y") +
   theme(legend.position = "none")
 
 
@@ -429,8 +429,9 @@ calif <- PromIndica %>%
 formattable(calif, #llamo datos
             align =c("l","c"), #Para alinear los datos de la tabla cada "" es una columna
             list(`ESTADO` = formatter( #datos específicos
-              "span", style = ~ style(color = "grey",font.weight = "bold")),
+              "span", style = ~ formattable::style(color = "grey",font.weight = "bold")),
               `AVERAGE` = color_tile("transparent", "orange")# me crea una barra roja con proporción a los datos
             )
 )
+
 
