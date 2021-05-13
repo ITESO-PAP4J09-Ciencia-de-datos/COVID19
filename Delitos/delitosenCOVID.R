@@ -96,7 +96,7 @@ incidencias <- delitos_tidy_tsbl %>%
   index_by(Año = year(Fecha)) %>% 
   summarise(Cuenta = sum(Cuenta)) %>% 
   as_tibble(incidencias) %>% 
-  mutate(cambio = (Cuenta / lag(Cuenta) - 1) * 100) %>% 
+  mutate(cambio = (Cuenta / lag(Cuenta) - 1)*100) %>% 
   filter(Año != 2021)
 
 incidencias %>% 
@@ -105,36 +105,45 @@ incidencias %>%
   facet_wrap(~ Tipo_de_delito, scales = "free_y") +
   theme(legend.position = "none")
 
-incidencias %>% 
+perc_cambio_incidencias <- incidencias %>%
+  ggplot(aes(x = Año, y = cambio, color = Subtipo_de_delito)) +
+  geom_line() +
+  geom_line(size = 1)+
+  facet_wrap(~ Subtipo_de_delito, scales = "free_y") +
+  theme(legend.position = "none")
+plotly::ggplotly(perc_cambio_incidencias)
+
+
+incidencias <- incidencias %>% 
   pivot_wider(names_from = Año, values_from = Cuenta:cambio)
 
-Incidencia_2019 <- delitos_tidy_tsbl %>% 
-  group_by_key() %>% 
-  index_by(Año = year(Fecha)) %>% 
-  summarise(Cuenta = sum(Cuenta)) %>% 
-  filter(Año %in% 2019) %>%
-  as_tibble(Incidencia_2019) %>%
-  transmute( Delito = Tipo_de_delito, 
-                    Incidencia_2019 = Cuenta) 
+# Incidencia_2019 <- delitos_tidy_tsbl %>% 
+#   group_by_key() %>% 
+#   index_by(Año = year(Fecha)) %>% 
+#   summarise(Cuenta = sum(Cuenta)) %>% 
+#   filter(Año %in% 2019) %>%
+#   as_tibble(Incidencia_2019) %>%
+#   transmute( Delito = Tipo_de_delito, 
+#                     Incidencia_2019 = Cuenta) 
+# 
+# Incidencia_2020 <- delitos_tidy_tsbl %>% 
+#   group_by_key() %>% 
+#   index_by(Año = year(Fecha)) %>% 
+#   summarise(Cuenta = sum(Cuenta)) %>% 
+#   filter(Año %in% 2020) %>%
+#   as_tibble(Incidencia_2020) %>%
+#   mutate( Delito = Tipo_de_delito, 
+#               Incidencia_2020 = Cuenta) %>%
+#   select(Delito, Incidencia_2020)
 
-Incidencia_2020 <- delitos_tidy_tsbl %>% 
-  group_by_key() %>% 
-  index_by(Año = year(Fecha)) %>% 
-  summarise(Cuenta = sum(Cuenta)) %>% 
-  filter(Año %in% 2020) %>%
-  as_tibble(Incidencia_2020) %>%
-  mutate( Delito = Tipo_de_delito, 
-              Incidencia_2020 = Cuenta) %>%
-  select(Delito, Incidencia_2020)
-
-Incidencia <- Incidencia_2020 %>%
-  add_column(Incidencia_2019$Incidencia_2019) %>%
-  mutate(
-    Porcentaje_de_cambio = round((
-      (Incidencia_2020 - Incidencia_2019$Incidencia_2019)/Incidencia_2020), digits = 5),
-    Incidencia_2019 = Incidencia_2019$Incidencia_2019) %>%
-  select(Delito, Incidencia_2019, Incidencia_2020, Porcentaje_de_cambio)%>%
-  arrange(desc(Porcentaje_de_cambio)) 
+# Incidencia <- Incidencia_2020 %>%
+#   add_column(Incidencia_2019$Incidencia_2019) %>%
+#   mutate(
+#     Porcentaje_de_cambio = round((
+#       (Incidencia_2020 - Incidencia_2019$Incidencia_2019)/Incidencia_2020), digits = 5),
+#     Incidencia_2019 = Incidencia_2019$Incidencia_2019) %>%
+#   select(Delito, Incidencia_2019, Incidencia_2020, Porcentaje_de_cambio)%>%
+#   arrange(desc(Porcentaje_de_cambio)) 
  
 Tabla <- Incidencia %>%
   mutate(Porcentaje_de_cambio =  percent(Porcentaje_de_cambio, 2)) %>%
