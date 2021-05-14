@@ -430,7 +430,6 @@ unlink(temp)
 
 
 ```{r}
-
 Entidades <- read_xlsx("../Datos nacionales abiertos/201128 Catalogos.xlsx",sheet="Catálogo de ENTIDADES")
 
 # Clasificación de datos  -------------------------------------------------
@@ -1064,7 +1063,7 @@ Ranking Nacional
 
 ### Calificación por estado para manejo de la pandemia
 
-```{r}
+```{r echo = FALSE, results= 'hide'}
 
 # # Importación de datos ----------------------------------------------------
 # 
@@ -1472,6 +1471,10 @@ calif <- PromIndica %>%
   arrange(desc(AVERAGE))
 
   colnames(calif)[colnames(calif)=="ENTIDAD_FEDERATIVA"] <- "ESTADO"
+  
+```
+
+```{r}
 
 #Tabla que muestra el número de pruebas que se hacen por día en los estados
 formattable(calif, #llamo datos
