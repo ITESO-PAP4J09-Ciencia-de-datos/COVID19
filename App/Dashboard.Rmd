@@ -418,6 +418,9 @@ Row
 #          hc_mapNavigation(enabled = T)
 # lubridate::today()-1
 # fecha <- "210415"
+
+
+
 options(timeout = 700)
 temp <- tempfile()
 download.file("http://datosabiertos.salud.gob.mx/gobmx/salud/datos_abiertos/datos_abiertos_covid19.zip", temp)
@@ -430,7 +433,6 @@ unlink(temp)
 
 
 ```{r}
-
 Entidades <- read_xlsx("../Datos nacionales abiertos/201128 Catalogos.xlsx",sheet="Catálogo de ENTIDADES")
 
 # Clasificación de datos  -------------------------------------------------
@@ -1064,7 +1066,7 @@ Ranking Nacional
 
 ### Calificación por estado para manejo de la pandemia
 
-```{r}
+```{r echo = FALSE, results= 'hide'}
 
 # # Importación de datos ----------------------------------------------------
 # 
@@ -1472,6 +1474,10 @@ calif <- PromIndica %>%
   arrange(desc(AVERAGE))
 
   colnames(calif)[colnames(calif)=="ENTIDAD_FEDERATIVA"] <- "ESTADO"
+  
+```
+
+```{r}
 
 #Tabla que muestra el número de pruebas que se hacen por día en los estados
 formattable(calif, #llamo datos
@@ -1881,7 +1887,8 @@ fcst_TSLM_fill <- fit_TSLM_fill %>%  forecast(h = 15)
 fcst_TSLM %>%
   autoplot(Vacunas_latam_tsibble) +
   facet_wrap(~location, ncol = 3, scales = 'free_y') +
-  ggtitle('Vacunas en LATAM') + 
+  ggtitle('Pronóstico modelo TSLM ') + 
+  xlab('Meses') +
   ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_g1
 
 
@@ -1890,7 +1897,8 @@ fcst_TSLM %>%
 fcst_TSLM_fill %>%
   autoplot(VLT_fill) +
   facet_wrap(~location, ncol = 3, scales = 'free_y') +
-  ggtitle('Vacunas en LATAM') + 
+  ggtitle('Pronóstico modelo TSLM ') + 
+  xlab('Meses') +
   ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_fill_g1
 
 #integración de las visualizaciones

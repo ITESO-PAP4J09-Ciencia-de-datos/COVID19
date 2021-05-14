@@ -15,7 +15,7 @@ library(lubridate)
 #integrar visualización
 library(patchwork)
 
-library(raster)
+
 
 # Carga de datos ----------------------------------------------------------
 
@@ -109,6 +109,7 @@ EscenarioLatam_fill <- ggplot(data = VLT_fill) +
 EscenarioLatam_Comparacion = EscenarioLatam + EscenarioLatam_fill
 EscenarioLatam_Comparacion
 
+plotly::ggplotly(EscenarioLatam)
 plotly::ggplotly(EscenarioLatam_Comparacion) #Este comando solo se utiliza para ver más a detalle aquellos países que dan problema
 #tenemos problema con Costa Rica (reporta cada semana), 
 #Bolivia (pico negativo a finales de febrero) 
@@ -291,7 +292,8 @@ fcst_TSLM_fill
 fcst_TSLM %>%
   autoplot(Vacunas_latam_tsibble) +
   facet_wrap(~location, ncol = 3, scales = 'free_y') +
-  ggtitle('Vacunas en LATAM') + 
+  ggtitle('Pronóstico (TSLM)') + 
+  xlab('Meses') +
   ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_g1
 
 
@@ -300,7 +302,8 @@ fcst_TSLM %>%
 fcst_TSLM_fill %>%
   autoplot(VLT_fill) +
   facet_wrap(~location, ncol = 3, scales = 'free_y') +
-  ggtitle('Vacunas en LATAM') + 
+  ggtitle('Pronóstico (TSLM)') + 
+  xlab('Meses') +
   ylab('Vacunas aplicadas por cada 100') -> fcst_TSLM_fill_g1
 
 
@@ -344,7 +347,7 @@ fcst_ETS_trend <- fit_ETS_trend %>%
   forecast(h = 15) %>%
   autoplot(VLT_fill) + 
   facet_wrap(~location, ncol = 3, scales = 'free_y') +
-  labs(title = 'Pronóstico de vacunas latam con ETS',  
+  labs(title = 'Pronóstico (modelo ETS)',  
        x = 'meses',
        y = 'Vacunas aplicadas por cada 100') -> fcst_ETS_trend_g1
 
@@ -372,7 +375,7 @@ fit_ETS_trendDamped <- VLT_fill %>%
   forecast(h = 15) %>%
   autoplot(VLT_fill) +
   facet_wrap(~location, ncol = 3, scales = 'free_y') +
-  labs(title = 'pronóstico de vacunas latama con ETS amortiguado',
+  labs(title = 'pronóstico (ETS amortiguado)',
        x = 'meses',
        y = 'Vacunas aplicadas por cada 100') -> fcst_ETS_trendDamped_g1
 
