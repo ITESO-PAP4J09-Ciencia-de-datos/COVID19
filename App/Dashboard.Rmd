@@ -1551,7 +1551,10 @@ Comparativa_nuevos_casos <- nuevos_casos_mundiales %>%
   geom_line(color = "grey") +
   geom_line(data = nuevos_casos_mundiales %>% filter(location %in% poblacion_similiar),
             aes(color = location), size = 1) +
-  scale_y_log10() 
+  scale_y_log10() + 
+  labs(title = 'Países población similar',
+       x = 'Nuevos casos' ,
+       y = 'Fecha')
 
 Comparativa_nuevos_casos
 
@@ -1570,7 +1573,10 @@ GraphLatam <- Comparativa_casos_latam_tsbl %>%
   ggplot() +
   geom_line(mapping = aes(x = date, y = Casos_por_millon, color = Paises)) +
   facet_wrap(~ Paises, scales = "free_y") +
-  theme(legend.position = "none")
+  theme(legend.position = "none") + 
+  labs(title = 'Comparación LATAM',
+       x = 'Fecha',
+       y = 'Casos por millón')
   
 GraphLatam
 ```
@@ -1792,7 +1798,7 @@ wrap_plots(A = g3,
 Vacunación en LATAM (Pronóstico TSLM)
 =========================================
 
-Row
+Column
 ------------------------------------
 
 ### TSLM
@@ -1909,6 +1915,20 @@ fcst_TSLM_g3 = fcst_TSLM_g1 + fcst_TSLM_fill_g1
 
 fcst_TSLM_g1
 
+# fcst_TSLM_fill_g1
+
+```
+
+
+Column
+------------------------------------
+
+### TSLM
+
+
+
+```{r}
+
 fcst_TSLM_fill_g1
 
 ```
@@ -1916,7 +1936,7 @@ fcst_TSLM_fill_g1
 Vacunación en LATAM (Pronóstico ETS)
 =========================================
 
-Row
+Column
 ------------------------------------
 
 ### ETS
@@ -1987,6 +2007,15 @@ fcst_ETS_comparacion = fcst_ETS_trend_g1 + fcst_ETS_trendDamped_g1
 #fcst_ETS_comparacion
 
 fcst_ETS_trend_g1
+
+```
+
+Column
+------------------------------------
+
+### ETS amortiguado 
+
+```{r}
 
 fcst_ETS_trendDamped_g1
 

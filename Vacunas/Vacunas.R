@@ -150,6 +150,17 @@ Vacunas_latam_tsibble %>%
   expand_limits(x = ymd(c("2021-02","2021-04"))) -> g1
 
 
+
+# Vacunas_latam_tsibble %>%
+#   gg_season(total_vaccinations_per_hundred, labels = "both") +
+#   facet_wrap(~location, ncol = 3, scales = 'free_y')
+#   labs(y = "Vacunas aplicadas por cada 100",
+#        x = "Meses",
+#        title = "Vacunación por meses en los diferentes paises de LATAM") +
+#   expand_limits(x = 'free_x') -> prueba123
+ 
+
+
 #se repite el codigo para hacer lo mismo y luego juntarlos 
 #con el apoyo de patch work
 Vacunas_latam_tsibble %>%
@@ -405,8 +416,14 @@ fit_ETS_trendDamped <- VLT_fill %>%
        x = 'meses',
        y = 'Vacunas aplicadas por cada 100') -> fcst_ETS_trendDamped_g1
 
+  
+  
 fcst_ETS_comparacion = fcst_ETS_trend_g1 + fcst_ETS_trendDamped_g1
+
+
+
 fcst_ETS_comparacion
+
 
 
 
