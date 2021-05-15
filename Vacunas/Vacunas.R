@@ -76,12 +76,24 @@ VLT_miss <- Vacunas_latam_tsibble %>%
   tsibble::fill_gaps() #aqui se remplazan por valores faltantes
   #fill(direction = "down")
 
+
+
+
 #A continuacion hacemos un modelo ARIMA que se ajuste
 #a los datos que cotienen "valores faltantes"
 
 VLT_fill <- VLT_miss %>% 
-  fabletools::model(ARIMA(total_vaccinations_per_hundred))%>%
+  fabletools::model(ARIMA(total_vaccinations_per_hundred)) %>%
 fabletools::interpolate(VLT_miss)
+
+
+#Dado que la escala con el relleno ARIMA esta desfasado utilizamos
+#la función declarada al inicio de la sección "pronósticos" para hacer que 
+#los margenes se mantengan en una solución real
+
+AjusteEscala_vacunas_per_hundred <- new_transformation(scaled_logit, inv_scaled_logit)
+
+
 
 
 ### Visualización -----------------------------------------------------------
@@ -203,6 +215,20 @@ wrap_plots(A = EscenarioLatam,
 
 ### Pronósticos y modelaje  -------------------------------------------------
 
+#Segun el libro Forecasting; principles and practice (en R)
+# en el capitulo 13.3 se explica como mantener las graficas dentro de
+# los limites reales
+
+ #Función para transformar los limites
+ scaled_logit <- function(x, lower = 0, upper = 1) {
+  log((x - lower) / (upper - x))
+}
+
+
+  #función para revertir la transformación de los limites 
+ inv_scaled_logit <- function(x, lower = 0, upper = 1) {
+  (upper - lower) * exp(x) / (1 + exp(x)) + lower
+}
 
 # Modelo TSLM -------------------------------------------------------------
 #https://www.rdocumentation.org/packages/forecast/versions/8.14/topics/tslm

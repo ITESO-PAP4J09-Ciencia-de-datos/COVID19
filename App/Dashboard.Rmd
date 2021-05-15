@@ -1789,7 +1789,7 @@ wrap_plots(A = g3,
 
 ```
 
-Vacunación en LATAM (Pronósticos)
+Vacunación en LATAM (Pronóstico TSLM)
 =========================================
 
 Row
@@ -1905,10 +1905,19 @@ fcst_TSLM_fill %>%
 
 fcst_TSLM_g3 = fcst_TSLM_g1 + fcst_TSLM_fill_g1 
 
-fcst_TSLM_g3
+#fcst_TSLM_g3
+
+fcst_TSLM_g1
+
+fcst_TSLM_fill_g1
 
 ```
 
+Vacunación en LATAM (Pronóstico ETS)
+=========================================
+
+Row
+------------------------------------
 
 ### ETS
 
@@ -1975,7 +1984,11 @@ fit_ETS_trendDamped <- VLT_fill %>%
 
 fcst_ETS_comparacion = fcst_ETS_trend_g1 + fcst_ETS_trendDamped_g1
 
-fcst_ETS_comparacion
+#fcst_ETS_comparacion
+
+fcst_ETS_trend_g1
+
+fcst_ETS_trendDamped_g1
 
 ```
 
