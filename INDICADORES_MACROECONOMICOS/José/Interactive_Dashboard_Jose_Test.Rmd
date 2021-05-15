@@ -42,9 +42,13 @@ library(forecast)
 
 
 ```{r}
-#PIB <- read_excel("C:/Users/JoseGallardo/Documents/Ajolotec/PAP/BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "PIB")
+
+#Leer dataset del excel utilizado
 PIB1 <- read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "PIB")
-colnames(PIB1) <- c("Clave","Estado","Year","Clave_Sector","Nombre_Sector","Actividad","PIB")
+#Cambiar nombres de las columnas para facilitar calculos
+colnames(PIB1) <- c("Clave","Estado","Year","Clave_Sector",
+                    "Nombre_Sector","Actividad","PIB")
+#Convertir tabla a serie de tiempo usando la función as_tsibble()
 PIB_Test <- PIB1 %>% 
   as_tsibble(index=Year,key=c(Estado,Nombre_Sector)) %>% 
   group_by(Estado,Nombre_Sector,Actividad) %>% 
@@ -67,7 +71,10 @@ PIB_Anim <- PIB_Anim %>%
 ```{r}
 # REVISAR LA PAQUETERÍA MULTIDPLYR PARA REALIZAR EL TRABAJO EN PARALELO EN VARIOS NÚCLEOS
 
+
+#Leer dataset del excel utilizado
 Visitantes<- read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "Visitantes")
+#Cambiar nombres de las columnas para facilitar calculos
 colnames(Visitantes) <-  c("Year","Mes","Aeropuerto","Nacionalidad","Regiones","Sexo","Entradas")
 
 
