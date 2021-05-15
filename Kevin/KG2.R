@@ -16,9 +16,12 @@ IED <- IED %>%
 colnames(IED) <- c("Fecha","Tipo","Cifras Preliminares","Cifras Revisadas","C")
 
 #IED %>% glimpse
+
+IED$C <- NULL
+
 IED_tsbl <- IED %>% 
   pivot_longer(
-    cols      = c(`Cifras Preliminares`, `Cifras Revisadas`, C),
+    cols      = c(`Cifras Preliminares`, `Cifras Revisadas`),
     names_to  = "Tipo_de_cifra",
     values_to = "Cifras"
   ) %>% 
@@ -32,6 +35,18 @@ IED_tsbl %>%
   filter(Tipo_de_cifra != "C") %>% 
   autoplot() +
   facet_wrap(~ Tipo, ncol = 1)
-model <- IED_tsbl %>% model(arima=ARIMA(Cifras)) %>% forecast(h=5)
 
-autoplot(model)
+IED_tsbl <- IED_tsbl %>%
+  filter(Tipo_de_cifra != "C")
+
+#IED_tsbl$Cifras
+
+
+prediccion <- IED_tsbl %>%
+  model(arima=ARIMA(Cifras)) %>% 
+  forecast(h=8)
+
+prediccion %>%autoplot(IED_tsbl)
+#IED_tsbl$Cifras
+
+
