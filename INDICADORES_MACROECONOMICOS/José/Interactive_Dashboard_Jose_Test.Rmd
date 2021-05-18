@@ -1,0 +1,452 @@
+---
+title: "PIB First Dashboard Test"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    source_code: embed
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(knitr)
+library(DT)
+library(rpivotTable)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(openintro)
+library(highcharter)
+library(ggvis)
+library(tidyverse)
+library(tsibble)
+library(feasts)
+library(fable)
+library(readxl)
+#library(tidyr)
+library(lubridate)
+library(gganimate)
+library(gifski)
+library(av)
+library(gapminder)
+library(stringr)
+library(readr)
+library(zoo)
+library(forecast)
+# library(shiny)
+# library(shinydashboard)
+#library(multidplyr)
+#library(rvest) 
+#library(quantmod) 
+```
+
+
+```{r}
+
+#Leer dataset del excel utilizado
+PIB1 <- read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "PIB")
+#Cambiar nombres de las columnas para facilitar calculos
+colnames(PIB1) <- c("Clave","Estado","Year","Clave_Sector",
+                    "Nombre_Sector","Actividad","PIB")
+#Convertir tabla a serie de tiempo usando la función as_tsibble()
+PIB_Test <- PIB1 %>% 
+  as_tsibble(index=Year,key=c(Estado,Nombre_Sector)) %>% 
+  group_by(Estado,Nombre_Sector,Actividad) %>% 
+  summarise(PIB=sum(PIB))
+
+PIB_Anim <- PIB_Test
+PIB_Anim$Nombre_Sector <- NULL
+PIB_Anim$Actividad <- NULL
+
+PIB_Anim <- PIB_Anim %>% 
+  group_by(Year,Estado) %>% 
+  summarise(PIB=sum(PIB)) %>% 
+  arrange(Year,desc(PIB)) %>% 
+  mutate(PIB_round = sprintf("%.2f", PIB / 1000000)) %>% 
+  mutate(ranking = row_number()) %>% 
+  filter(ranking<=15)
+
+```
+
+```{r}
+# REVISAR LA PAQUETERÍA MULTIDPLYR PARA REALIZAR EL TRABAJO EN PARALELO EN VARIOS NÚCLEOS
+
+
+#Leer dataset del excel utilizado
+Visitantes<- read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "Visitantes")
+#Cambiar nombres de las columnas para facilitar calculos
+colnames(Visitantes) <-  c("Year","Mes","Aeropuerto","Nacionalidad","Regiones","Sexo","Entradas")
+
+
+Visitantes <- Visitantes %>% filter(Aeropuerto=="Guadalajara, Jal."|
+                          Aeropuerto=="Puerto Vallarta, Jal.")
+
+
+
+Visitantes <- Visitantes %>% 
+  #slice_sample(n = 500) %>% 
+  mutate(
+    Mes = str_trunc(Mes, side = "right", width = 3, ellipsis = ""),
+    Mes = case_when(
+      Mes == "Ene" ~ "Jan",
+      Mes == "Abr" ~ "Apr",
+      Mes == "Ago" ~ "Aug",
+      Mes == "Dic" ~ "Dec",
+      TRUE         ~ Mes
+    )
+  ) %>% 
+  unite(Periodo, Year:Mes, sep = " ", remove = FALSE) %>%
+  mutate(Periodo = yearmonth(Periodo)) %>% 
+  as_tsibble(
+    index = Periodo,
+    key   = c(Aeropuerto, Nacionalidad, Regiones,Sexo)
+  )
+
+```
+
+
+
+```{r}
+mycolors <- c("blue", "#FFC125", "darkgreen", "darkorange")
+```
+
+Interactive Data Visualization
+=====================================
+
+Row
+-------------------------------------
+
+### Producto Interno Bruto
+
+```{r}
+valueBox(paste("PIB"),
+         color = "warning")
+```
+
+### PIB de la Ciudad de México 2019
+
+```{r}
+valueBox({t <- PIB_Test %>%  group_by(Estado) %>% 
+  summarize(PIB1=sum(PIB)) %>% 
+  filter(Estado=="Ciudad de México"& Year=="2019")
+  sum(t$PIB1)},
+         icon = "fa-user")
+```
+
+### PIB del Estado de México 2019
+
+```{r}
+valueBox({t <- PIB_Test %>%  group_by(Estado) %>% 
+  summarize(PIB1=sum(PIB)) %>% 
+  filter(Estado=="Estado de México"& Year=="2019")
+  sum(t$PIB1)},
+         icon = "fa-user")
+```
+
+### PIB de Nuevo León 2019
+
+```{r}
+valueBox({t <- PIB_Test %>%  group_by(Estado) %>% 
+  summarize(PIB1=sum(PIB)) %>% 
+  filter(Estado=="Nuevo León"& Year=="2019")
+  sum(t$PIB1)},
+         icon = "fa-user")
+```
+
+### PIB de Jalisco 2019
+
+```{r}
+valueBox({t <- PIB_Test %>%  group_by(Estado) %>% 
+  summarize(PIB1=sum(PIB)) %>% 
+  filter(Estado=="Jalisco"& Year=="2019")
+  sum(t$PIB1)},
+         icon = "fa-user")
+```
+
+### PIB de Veracruz 2019
+
+```{r}
+valueBox({t <- PIB_Test %>%  group_by(Estado) %>% 
+  summarize(PIB1=sum(PIB)) %>% 
+  filter(Estado=="Veracruz"& Year=="2019")
+  sum(t$PIB1)},
+         icon = "fa-user")
+```
+
+### PIB de Guanajuato 2019
+
+```{r}
+valueBox({t <- PIB_Test %>%  group_by(Estado) %>% 
+  summarize(PIB1=sum(PIB)) %>% 
+  filter(Estado=="Guanajuato"& Year=="2019")
+  sum(t$PIB1)},
+         icon = "fa-user")
+```
+
+Row
+-------------------------------
+
+### PIB por estado (más significativos)
+
+```{r}
+p1 <- PIB_Test %>% group_by(Estado) %>% 
+  summarize(PIB1=sum(PIB)) %>% 
+  filter(Estado=="Jalisco"|
+           Estado=="Ciudad de México"|
+           Estado=="Estado de México"|
+           Estado=="Nuevo León"|
+           Estado=="Veracruz"|
+           Estado=="Guanajuato") %>% 
+  ggplot(aes(x=Year,y=PIB1),size=2) +
+  geom_line(aes(color=Estado)) +
+  scale_y_log10() + ylab("PIB") + xlab("Fecha")#+ 
+  #transition_reveal(PIB1)
+p1
+```
+
+### PIB estados más significativos
+
+```{r}
+p2 <- PIB_Test %>% filter(Year==2018) %>%
+  group_by(Estado) %>%
+  summarise(PIB1 = sum(PIB)) %>%
+  filter(PIB1>700000) %>%
+  plot_ly(labels = ~Estado,
+          values = ~PIB1,
+          marker = list(colors = mycolors)) %>%
+  add_pie(hole = 0.2) %>%
+  layout(xaxis = list(zeroline = F,
+                      showline = F,
+                      showticklabels = F,
+                      showgrid = F),
+         yaxis = list(zeroline = F,
+                      showline = F,
+                      showticklabels=F,
+                      showgrid=F))
+p2 
+```
+
+### PIB por tipo de actividad
+
+```{r}
+p3 <- PIB_Test %>% filter(Year==2018) %>%
+  group_by(Actividad) %>%
+  summarise(PIB1 = sum(PIB))  %>%
+  plot_ly(labels = ~Actividad,
+          values = ~PIB1,
+          marker = list(colors = mycolors)) %>%
+  add_pie(hole = 0.2) %>%
+  layout(xaxis = list(zeroline = F,
+                      showline = F,
+                      showticklabels = F,
+                      showgrid = F),
+         yaxis = list(zeroline = F,
+                      showline = F,
+                      showticklabels=F,
+                      showgrid=F))
+p3
+```
+
+PIB
+-------------------------------
+```{r}
+PIB_Table <- PIB_Test  %>% group_by(Estado) %>%  summarize(Promedio_PIB = mean(PIB,na.rm = TRUE)) %>% top_n(5) %>% arrange(desc(Promedio_PIB))
+datatable(PIB_Table,
+          caption = "Top 5 Estados más significativos",
+          rownames = T,
+          options = list(pageLength = 5))
+```
+
+
+
+```{r}
+PIB_Table <- PIB_Test  %>% group_by(Estado) %>%  summarize(Promedio_PIB = mean(PIB,na.rm = TRUE)) %>% arrange(desc(Promedio_PIB))%>% top_n(-5) 
+datatable(PIB_Table,
+          caption = "Top 5 Estados menos significativos",
+          rownames = T,
+          options = list(pageLength = 5))
+```
+
+
+```{r}
+# p4 <- PIB_Test %>% group_by(Estado) %>% 
+#   summarize(PIB1=sum(PIB)) %>% 
+#   ggplot(aes(x=Year,y=PIB1)) +
+#   geom_line(aes(color=Estado),size=1.3) +
+#   scale_y_log10() 
+# 
+# p4 <- p4 + transition_reveal(PIB1)
+# ![Prueba de gráfica Animada](figs/GIF_TEST.gif)
+
+# anim_save("figs/GIF_TEST.gif",p4)
+```
+
+Gráfica PIB Animada
+=====================================
+```{r}
+# animacion <- PIB_Anim %>%
+#   ggplot() +
+#   ylab("PIB millones") +
+#   geom_col(aes(ranking, PIB, fill = Estado)) +
+#   geom_text(aes(ranking, PIB, label = PIB_round), hjust=-0.1) +
+#   geom_text(aes(ranking, y=0 , label = Estado), hjust=1.1) +
+#   geom_text(aes(x=15, y=max(PIB) , label = as.factor(Year)), vjust = 0.2, alpha = 0.5,  col = "gray", size = 20) +
+#   coord_flip(clip = "off", expand = FALSE) + scale_x_reverse() +
+#   theme_minimal() + theme(
+#     panel.grid = element_blank(),
+#     legend.position = "none",
+#     axis.ticks.y = element_blank(),
+#     axis.title.y = element_blank(),
+#     axis.text.y = element_blank(),
+#     plot.margin = margin(1, 4, 1, 3, "cm")
+#   ) +
+#   transition_states(Year, state_length = 0, transition_length = 15) +
+#   enter_fade() +
+#   exit_fade() +
+#   ease_aes('quadratic-in-out')
+# 
+# animacion
+# 
+# anim_save("../José/figs/GIF_TEST3.gif",animate(animacion, width = 700, height = 432, fps = 25, duration = 15, rewind = FALSE))
+```
+![Prueba de gráfica Animada](figs/GIF_TEST3.gif)
+
+
+
+
+
+Detalles Interno Bruto por INEGI
+========================================
+
+```{r}
+datatable(PIB_Test,
+          caption = "Tabla de PIB",
+          rownames = T,
+          filter = "top",
+          options = list(pageLength = 25))
+```
+
+
+
+Visitantes
+========================================
+
+### Gráficas
+```{r}
+Visitantesx <- Visitantes %>%
+  group_by(Regiones,Sexo) %>%
+  summarise(Entradas=sum(Entradas)) %>% 
+  filter(Regiones!="Apátrida")
+p5 <- Visitantesx %>%
+  ggplot(aes(x=Periodo,y=Entradas)) +
+  geom_line(aes(color=Regiones)) +
+  #facet_grid(.~Sexo,scales = "free") +
+  scale_y_log10()
+  
+p5
+```
+
+### Gráficas
+```{r}
+p6 <- Visitantes %>%
+  plot_ly(labels = ~Aeropuerto,
+          values = ~Entradas,
+          marker = list(colors = mycolors)) %>%
+  add_pie(hole = 0.2) %>%
+  layout(xaxis = list(zeroline = F,
+                      showline = F,
+                      showticklabels = F,
+                      showgrid = F),
+         yaxis = list(zeroline = F,
+                      showline = F,
+                      showticklabels=F,
+                      showgrid=F))
+p6
+```
+
+
+
+Predicciones
+========================================
+
+### Gráfica
+```{r}
+Visitantes1 <- Visitantesx %>% filter(Sexo=="Hombre"&Regiones=="África")
+#autoplot(Visitantes1) + ylab("Entradas") + ggtitle("Visitantes Hombres de Africa")
+
+Visitantes2 <- Visitantes1 %>%
+  model(arima=ARIMA(Entradas),ets=ETS(Entradas)) %>%
+  forecast(h=5)
+
+Visitantes2 %>% 
+  autoplot(Visitantes1,level=NULL) + 
+  ggtitle("Visitantes provenientes de Africa")
+```
+
+
+
+
+```{r}
+############ Predictions using tsibbles
+# Visitantes2 <- Visitantes1 %>%
+#   model(arima=ARIMA(Entradas),ets=ETS(Entradas)) %>%
+#   forecast(h=5)
+# 
+# autoplot(Visitantes2,level=NULL) 
+
+
+
+
+
+
+# ############### Predictions using time series
+# 
+# Visitantes2 <- ts(Visitantes1[,"Entradas"],start=c(2012,1),frequency=12)
+# 
+# Visitantes3 <- ts(Visitantes1[,"Entradas"],start=c(2012,1),end=2019,frequency=12)
+# 
+# #Try to graph the data
+# autoplot(Visitantes2) +
+#   ggtitle("Visitantes Hombres de África") +
+#   ylab("Entradas")
+# 
+# autoplot(Visitantes3) +
+#   ggtitle("Visitantes Hombres de África") +
+#   ylab("Entradas")
+# 
+# #Build our Model
+# 
+# fit_Arima <- auto.arima(Visitantes2,seasonal=T)
+# summary(fit_Arima)
+# checkresiduals(fit_Arima)
+# 
+# fit_Arima <- auto.arima(Visitantes3,seasonal=T)
+# summary(fit_Arima)
+# checkresiduals(fit_Arima)
+# 
+# 
+# #forecast
+# fcast <- forecast(fit_Arima,h=5)
+# autoplot(fcast)
+# 
+# 
+# Visitantes4 <- Visitantes1 %>% model(arima=ARIMA(Entradas),ets=ETS(Entradas)) %>% forecast(h=10)
+# 
+# autoplot(Visitantes4,level=NULL) 
+
+
+```
+
+
+Detalles Visitantes 
+========================================
+
+```{r}
+datatable(Visitantes,
+          caption = "Tabla de Visitantes",
+          rownames = T,
+          filter = "top",
+          options = list(pageLength = 25))
+```
+
+

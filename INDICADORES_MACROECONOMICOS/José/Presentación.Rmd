@@ -1,0 +1,262 @@
+---
+title: "Presentación PAP"
+output: powerpoint_presentation
+ #  reference_doc: template.pptx
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(flexdashboard)
+library(knitr)
+library(DT)
+library(rpivotTable)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(openintro)
+library(highcharter)
+library(ggvis)
+library(tidyverse)
+library(tsibble)
+library(feasts)
+library(fable)
+library(readxl)
+library(lubridate)
+library(gganimate)
+library(gifski)
+library(av)
+library(gapminder)
+library(stringr)
+library(readr)
+library(zoo)
+library(forecast) 
+library(tsibbledata)
+library(patchwork)
+library(quantmod)
+library(GGally)
+```
+
+## Introducción
+
+Los indicadores macroeconómicos son estadísticas económicas que se liberan periódicamente por agencias gubernamentales y organizaciones privadas. Estos indicadores proporcionan información sobre el rendimiento económico de un país o de una región en particular y, por lo tanto, tienen un impacto significativo sobre el mercado de divisas y las operaciones comerciales
+
+
+
+## PIB
+El producto interior bruto (PIB) es un indicador macroeconómico que refleja el valor monetario de todos los bienes y servicios finales producidos por un país o región en un determinado periodo de tiempo, normalmente un año. Se utiliza para medir la riqueza que genera un país. También se conoce como producto bruto interno (PBI).
+
+
+
+```{r}
+PIB1 <- read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "PIB")
+colnames(PIB1) <- c("Clave","Estado","Year","Clave_Sector","Nombre_Sector","Actividad","PIB")
+PIB_Test <- PIB1 %>% 
+  as_tsibble(index=Year,key=c(Estado,Nombre_Sector)) %>% 
+  group_by(Estado,Nombre_Sector,Actividad) %>% 
+  summarise(PIB=sum(PIB))
+mycolors <- c("blue", "#FFC125", "darkgreen", "darkorange")
+```
+
+
+## Gráfica de PIB Estados más significativos
+
+```{r}
+p1 <- PIB_Test %>% group_by(Estado) %>% 
+  summarize(PIB1=sum(PIB)) %>% 
+  filter(Estado=="Jalisco"|
+           Estado=="Ciudad de México"|
+           Estado=="Estado de México"|
+           Estado=="Nuevo León"|
+           Estado=="Veracruz"|
+           Estado=="Guanajuato") %>% 
+  ggplot(aes(x=Year,y=PIB1),size=2) +
+  geom_line(aes(color=Estado)) +
+  scale_y_log10() #+ 
+  #transition_reveal(PIB1)
+p1
+```
+
+
+## Ejemplo predicción con modelo ARIMA
+
+```{r}
+PIB_Arim <- PIB_Test %>% group_by(Estado) %>% 
+  summarize(PIB1=sum(PIB)) %>% 
+  filter(Estado=="Ciudad de México")
+
+PIB_Arim2 <- PIB_Arim %>%
+  model(arima=ARIMA(PIB1)) %>%
+  forecast(h=2)
+
+PIB_Arim2 %>% 
+  autoplot(PIB_Arim) + 
+  ggtitle("Predicción sobre PIB en ciudad de México")
+```
+
+
+## Visitantes
+
+Analizaremos la cantidad de Visitantes extranjeros por entrada aérea, por nacionalidad en algunos de los aeropuertos de nuestro país, esto con la intención de ver como el turismo se va manejando a tráves de los años y de esta manera poder también relacionarlo con otros indicadores macroeconomicos
+
+## Gráficas sobre visitantes
+
+```{r}
+# REVISAR LA PAQUETERÍA MULTIDPLYR PARA REALIZAR EL TRABAJO EN PARALELO EN VARIOS NÚCLEOS
+
+Visitantes<- read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "Visitantes")
+colnames(Visitantes) <-  c("Year","Mes","Aeropuerto","Nacionalidad","Regiones","Sexo","Entradas")
+
+
+Visitantes <- Visitantes %>% filter(Aeropuerto=="Acapulco, Gro."|
+                        Aeropuerto== "Aguascalientes, Ags."|
+                        Aeropuerto== "Cancún, Q. Roo"|
+                        Aeropuerto=="Ciudad de México (AICM)"|
+                        Aeropuerto=="Guadalajara, Jal.")
+
+
+
+Visitantes <- Visitantes %>% 
+  #slice_sample(n = 500) %>% 
+  mutate(
+    Mes = str_trunc(Mes, side = "right", width = 3, ellipsis = ""),
+    Mes = case_when(
+      Mes == "Ene" ~ "Jan",
+      Mes == "Abr" ~ "Apr",
+      Mes == "Ago" ~ "Aug",
+      Mes == "Dic" ~ "Dec",
+      TRUE         ~ Mes
+    )
+  ) %>% 
+  unite(Periodo, Year:Mes, sep = " ", remove = FALSE) %>%
+  mutate(Periodo = yearmonth(Periodo)) %>% 
+  as_tsibble(
+    index = Periodo,
+    key   = c(Aeropuerto, Nacionalidad, Regiones,Sexo)
+  )
+
+```
+
+```{r}
+Visitantesx <- Visitantes %>%
+  group_by(Regiones,Sexo) %>%
+  summarise(Entradas=sum(Entradas)) %>% 
+  filter(Regiones!="Apátrida")
+p5 <- Visitantesx %>%
+  ggplot(aes(x=Periodo,y=Entradas)) +
+  geom_line(aes(color=Regiones)) +
+  #facet_grid(.~Sexo,scales = "free") +
+  scale_y_log10()
+  
+p5
+```
+
+
+## IED
+
+La Inversión Extranjera Directa (IED) es aquella que tiene como propósito crear un vínculo duradero con fines económicos y empresariales de largo plazo, por parte de un inversionista extranjero en el país receptor.
+
+
+
+## Gráfica IED
+```{r, echo=FALSE, warning=FALSE, message=FALSE,fig.dim=c(10,8)}
+theme_set(theme_minimal())
+#Inversi?n Extranjera Directa por tipo de inversi?n
+#Definir el Dataset
+IED <-  read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx",
+                   sheet = "IED1")
+
+IED <- IED %>% 
+  mutate(Periodo = dmy(Periodo),
+         Periodo = yearquarter(Periodo))
+colnames(IED) <- c("Fecha","Tipo","Cifras Preliminares","Cifras Revisadas","C")
+
+#IED %>% glimpse()
+
+IED_tsbl <- IED %>% 
+  pivot_longer(
+    cols      = c(`Cifras Preliminares`, `Cifras Revisadas`, C),
+    names_to  = "Tipo_de_cifra",
+    values_to = "Cifras"
+  ) %>% 
+  as_tsibble(
+    index = Fecha,
+    key   = c(Tipo, Tipo_de_cifra)
+  )
+
+IED_tsbl %>%
+  filter(Tipo_de_cifra != "C") %>% 
+  autoplot() +
+  facet_wrap(~ Tipo, ncol = 1)
+
+```
+
+## ENOE
+
+Introducción Encuesta Nacional de ocupación y empleo
+
+
+## IMSS
+
+
+Asegurados o cotizantes : Se refiere a las personas que están aseguradas en el IMSS de manera directa como titulares. Incluye todas las modalidades de aseguramiento, tanto las relacionadas con puestos de trabajo afiliados al IMSS, como las afiliaciones de asegurados sin un empleo asociado en las modalidades 32, 33 y 40. No considera a pensionados o jubilados, ni a los beneficiarios de asegurados, pensionados o jubilados. 
+
+
+
+## Gráfica de IMSS
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,fig.dim=c(10,8)}
+IMSS <- read_excel("../BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "IMSS")
+#Cambiar el nombre de las columnas para facilitar los calculos
+colnames(IMSS) <- c("Division","Grupo","Fracción","Fecha","Trabajadores_Asegurados","Trabajadores_Permanentes","Trabajadores_Eventuales")
+
+IMSS_tbl <- IMSS %>% 
+  mutate(Fecha = yearmonth(Fecha))
+#group_by(IMSS$Fecha)
+
+IMSS_tbl <- IMSS_tbl %>% 
+  as_tsibble(
+    index = Fecha,
+    key   = c(Division, Grupo, Fracción) 
+  )
+
+var2 <- IMSS_tbl %>%
+  group_by(Division,Grupo) %>%
+  summarise(Trabajadores_Asegurados=sum(Trabajadores_Asegurados))
+
+var2 <- var2 %>% filter(Division=="Agricultura, ganadería, silvicultura, pesca y caza"&Grupo=="Ganadería")
+
+autoplot(var2)
+
+
+
+
+
+```
+
+## Predicción
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,fig.dim=c(10,8)}
+
+var2.1 <- var2 %>%
+  model(arima=ARIMA(Trabajadores_Asegurados)) %>%
+  forecast(h=5)
+
+autoplot(var2.1)
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
