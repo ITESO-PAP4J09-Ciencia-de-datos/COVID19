@@ -1,0 +1,82 @@
+---
+title: "arima_"
+output: html_document
+---
+```{r }
+
+library(fable)
+library(feasts)
+library(tsibble)
+library(tsibbledata)
+library(readxl)
+library(tidyverse)
+library(lubridate)
+library(patchwork)
+library(gapminder)
+library(plotly)
+library(gganimate)
+library(quantmod)
+#library(dplyr)
+
+```
+
+```{r}
+
+Exportaciones<- read_excel("C:/Users/mamarta/Downloads/BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "Exportaciones")
+ExportacionesJ <- Exportaciones[Exportaciones$`Nombre entidad` == "Jalisco",]
+ExportacionesJ <- select(ExportacionesJ , -"Nombre entidad")
+EXPOJ<- ExportacionesJ %>%
+  filter(Subsector == "Agricultura A/")
+#EXPSN<-EXPOJ[1:8,]
+```
+
+EXPORTACIONES EN TRIMESTRAL MILES DE DOLARES
+
+
+
+
+```{r}
+EXPOJ <- EXPOJ %>%
+  mutate(Quarter =yearquarter(dmy(Fecha) )) %>%
+  select(-Fecha) %>%
+  as_tsibble(key = c(Subsector),
+             index = Quarter)
+
+```
+
+
+
+
+
+
+```{r}
+EXPOJ %>%
+  autoplot(`Exportaciones totales`) +
+  labs(title="Exportaciones Agricultura",
+       y="Miles")
+```
+
+
+```{r}
+EXPOJ %>%
+  gg_tsdisplay(difference(`Exportaciones totales`), plot_type='partial')
+```
+
+AUITOARIMA QUE NO ES SEASONAL
+```{r}
+fitex <- EXPOJ %>%
+  model(ARIMA(`Exportaciones totales`))
+report(fitex)
+```
+```{r}
+
+fitex %>% forecast(h=4) %>%
+  autoplot(EXPOJ)
+```
+```
+
+
+
+
+
+

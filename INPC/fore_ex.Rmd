@@ -1,0 +1,670 @@
+---
+title: "FORECAST EXPORTACIONES"
+output: html_document
+---
+
+Vamos a observar las exportaciones que se realizaron en Jalisco en diferentes sectores productivos, de hace unos años hasta el último reporte de finales de 2020.
+Las exportaciones son muy importantes en un estado ya que representa en cierta manera la productuvidad que esta teniendo en los diferentes sector y la capacidad de produccion que tiene . Asi como que estas fomentan el movimiento de la economia y producen ganacias para el estado. 
+
+Los datos que vamos a estar analizando estan en Millones de pesos y las muestras de esos datos se presentan de manera trimestral, una vez cada cuarto del año, asi vemos 4 divisiones en el total anual.  
+
+
+```{r, include=FALSE, warning=FALSE}
+library(fable)
+library(feasts)
+library(tsibble)
+library(tsibbledata)
+library(readxl)
+library(tidyverse)
+library(lubridate)
+library(patchwork)
+library(plotly)
+library(gganimate)
+library(quantmod)
+#library(dplyr)
+library(GGally)
+library("easypackages")
+packages("tidyverse","lubridate", "patchwork", "fpp2","fpp3","scales","DT")
+```
+
+
+```{r, include=FALSE, warning=FALSE}
+EX <- read_excel("BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "Exportaciones")
+EXJ <- EX[EX$`Nombre entidad` == "Jalisco",]
+EXJ<- select(EXJ , -"Nombre entidad")
+```
+
+
+
+```{r, include=FALSE, warning=FALSE}
+EXJ <- EXJ %>%
+  mutate(Quarter =yearquarter(dmy(Fecha))) %>%
+  select(-Fecha) %>%
+  as_tsibble(key = c(Subsector), index = Quarter)
+```
+
+
+
+
+**AGRICULTURA**
+
+```{r, fig.align='center', echo=FALSE}
+
+AG0<-EXJ %>% 
+  filter(Subsector == "Agricultura A/")%>%
+  autoplot()
+
+AG1<-EXJ %>%
+  filter(Subsector == "Agricultura A/") %>%
+  gg_season(`Exportaciones totales`, labels = "both") +
+  labs(y = "Exportaciones totales",x="Q",
+       title = "Grafica estacional Agricultura A/")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+AG2<-EXJ %>% 
+  filter(Subsector == "Agricultura A/") %>%
+  gg_subseries(`Exportaciones totales`) +
+  labs(y = "Indice", x="Mes",
+    title = "Subserie de Agricultura A/" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+AG3<-EXJ %>% 
+  filter(Subsector == "Agricultura A/") %>% 
+  gg_lag(`Exportaciones totales`, geom = "point", lags=1:3) +
+  labs(title = "Diferenciacion en Agricultura A/")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+AG4<-EXJ %>%
+  filter(Subsector== "Agricultura A/") %>%
+  model(STL(`Exportaciones totales` ~ trend(window=7) + season(window='periodic'),
+    robust = TRUE)) %>%
+  components() %>%
+  autoplot()  + labs(y = "Indice", x="Mes",
+    title = "Descomposición STL serie de Agricultura A/" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+AG5<-EXJ %>% 
+  filter(Subsector == "Agricultura A/")%>%
+  PACF(`Exportaciones totales`) %>% autoplot()
+
+AG6<-EXJ %>% 
+  filter(Subsector == "Agricultura A/")%>%
+  ACF(`Exportaciones totales`) %>% autoplot()
+
+
+(AG0)
+
+(AG1 | AG2 ) / (AG3 | AG4 ) / (AG5 | AG6)
+
+```
+
+
+
+```{r, echo=FALSE, fig.align='center'}
+
+fitAG <- EXJ%>%
+  filter(Subsector == "Agricultura A/") %>%
+  model(ARIMA(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE))
+report(fitAG)
+
+fitAG %>% gg_tsresiduals()
+
+EXJ %>%
+  filter(Subsector == "Agricultura A/") %>% 
+  model(ARIMA(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(EXJ) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (0,0,0)(0,1,0) de Agricultura A/")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+**CURTIDO Y FABRICACIÓN DE CUERO Y PIEL**
+
+```{r, fig.align='center', echo=FALSE}
+
+CP0<-EXJ %>% 
+  filter(Subsector == "Curtido y acabado de cuero y piel, y fabricación de productos de cuero, piel y materiales sucedáneos")%>%
+  autoplot()
+
+CP1<-EXJ %>%
+  filter(Subsector == "Curtido y acabado de cuero y piel, y fabricación de productos de cuero, piel y materiales sucedáneos") %>%
+  gg_season(`Exportaciones totales`, labels = "both") +
+  labs(y = "Exportaciones totales",x="Q",
+       title = "Grafica estacional Curtido y fabricación de cuero y piel")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP2<-EXJ %>% 
+  filter(Subsector == "Curtido y acabado de cuero y piel, y fabricación de productos de cuero, piel y materiales sucedáneos") %>%
+  gg_subseries(`Exportaciones totales`) +
+  labs(y = "Indice", x="Mes",
+    title = "Subserie de Curtido y fabricación de cuero y piel" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP3<-EXJ %>% 
+  filter(Subsector == "Curtido y acabado de cuero y piel, y fabricación de productos de cuero, piel y materiales sucedáneos") %>% 
+  gg_lag(`Exportaciones totales`, geom = "point", lags=1:3) +
+  labs(title = "Diferenciacion en Curtido y fabricación de cuero y piel")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP4<-EXJ %>%
+  filter(Subsector== "Curtido y acabado de cuero y piel, y fabricación de productos de cuero, piel y materiales sucedáneos") %>%
+  model(STL(`Exportaciones totales` ~ trend(window=7) + season(window='periodic'),
+    robust = TRUE)) %>%
+  components() %>%
+  autoplot()  + labs(y = "Indice", x="Mes",
+    title = "Descomposición STL serie de Curtido y fabricación de cuero y piel" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP5<-EXJ %>% 
+  filter(Subsector == "Curtido y acabado de cuero y piel, y fabricación de productos de cuero, piel y materiales sucedáneos")%>%
+  PACF(`Exportaciones totales`) %>% autoplot()
+
+CP6<-EXJ %>% 
+  filter(Subsector == "Curtido y acabado de cuero y piel, y fabricación de productos de cuero, piel y materiales sucedáneos")%>%
+  ACF(`Exportaciones totales`) %>% autoplot()
+
+
+(CP0)
+
+(CP1 | CP2 ) / (CP3 | CP4 ) / (CP5 | CP6)
+
+```
+
+
+
+```{r, echo=FALSE, fig.align='center'}
+
+fitAG <- EXJ%>%
+  filter(Subsector == "Curtido y acabado de cuero y piel, y fabricación de productos de cuero, piel y materiales sucedáneos") %>%
+  model(ARIMA(`Exportaciones totales`~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE))
+report(fitAG)
+
+fitAG %>% gg_tsresiduals()
+
+EXJ %>%
+  filter(Subsector == "Curtido y acabado de cuero y piel, y fabricación de productos de cuero, piel y materiales sucedáneos") %>% 
+  model(ARIMA(`Exportaciones totales`~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(EXJ) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (0,0,4) de Agricultura")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+**Otras industrias manufactureras**
+
+```{r, fig.align='center', echo=FALSE}
+
+
+
+FP0<-EXJ %>% 
+  filter(Subsector == "Otras industrias manufactureras")%>%
+  tsibble::fill_gaps()%>%
+  autoplot()
+
+FP1<-EXJ %>%
+  filter(Subsector == "Otras industrias manufactureras") %>%
+  tsibble::fill_gaps()%>%
+  gg_season(`Exportaciones totales`, labels = "both") +
+  labs(y = "Exportaciones totales",x="Q",
+       title = "Grafica estacional Otras industrias manufactureras")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+FP2<-EXJ %>% 
+  filter(Subsector == "Otras industrias manufactureras") %>%
+  tsibble::fill_gaps()%>%
+  gg_subseries(`Exportaciones totales`) +
+  labs(y = "Indice", x="Mes",
+    title = "Subserie de Otras industrias manufactureras" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+FP3<-EXJ %>% 
+  filter(Subsector == "Otras industrias manufactureras") %>% 
+  tsibble::fill_gaps()%>%
+  gg_lag(`Exportaciones totales`, geom = "point", lags=1:3) +
+  labs(title = "Diferenciacion en Otras industrias manufactureras")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+FP4<-EXJ %>%
+  filter(Subsector== "Otras industrias manufactureras") %>%
+  tsibble::fill_gaps()%>%
+  model(STL(`Exportaciones totales` ~ trend(window=7) + season(window='periodic'),
+    robust = TRUE)) %>%
+  components() %>%
+  autoplot()  + labs(y = "Indice", x="Mes",
+    title = "Descomposición STL serie de Otras industrias manufactureras" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+FP5<-EXJ %>% 
+  filter(Subsector == "Otras industrias manufactureras")%>%
+  tsibble::fill_gaps()%>%
+  PACF(`Exportaciones totales`) %>% autoplot()
+
+FP6<-EXJ %>% 
+  filter(Subsector == "Otras industrias manufactureras")%>%
+  tsibble::fill_gaps()%>%
+  ACF(`Exportaciones totales`) %>% autoplot()
+
+
+(FP0)
+
+(FP1 | FP2 ) / (FP3 | FP4 ) / (FP5 | FP6)
+
+```
+
+
+
+```{r, echo=FALSE, fig.align='center'}
+
+fitFP <- EXJ%>%
+  filter(Subsector == "Otras industrias manufactureras") %>%
+  model(ARIMA(`Exportaciones totales`~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE))
+report(fitFP)
+
+fitFP %>% gg_tsresiduals()
+
+EXJ %>%
+  filter(Subsector == "Otras industrias manufactureras") %>% 
+  model(ARIMA(`Exportaciones totales`~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(EXJ) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (0,1,4) de Otras industrias manufactureras")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+**Industrias metálicas básicas**
+
+```{r, fig.align='center', echo=FALSE}
+
+CP0<-EXJ %>% 
+  filter(Subsector == "Industrias metálicas básicas")%>%
+  autoplot()
+
+CP1<-EXJ %>%
+  filter(Subsector == "Industrias metálicas básicas") %>%
+  gg_season(`Exportaciones totales`, labels = "both") +
+  labs(y = "Exportaciones totales",x="Q",
+       title = "Grafica estacional Industrias metálicas básicas")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP2<-EXJ %>% 
+  filter(Subsector == "Industrias metálicas básicas") %>%
+  gg_subseries(`Exportaciones totales`) +
+  labs(y = "Indice", x="Mes",
+    title = "Subserie de Industrias metálicas básicas" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP3<-EXJ %>% 
+  filter(Subsector == "Industrias metálicas básicas") %>% 
+  gg_lag(`Exportaciones totales`, geom = "point", lags=1:3) +
+  labs(title = "Diferenciacion en Industrias metálicas básicas")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP4<-EXJ %>%
+  filter(Subsector== "Industrias metálicas básicas") %>%
+  model(STL(`Exportaciones totales` ~ trend(window=7) + season(window='periodic'),
+    robust = TRUE)) %>%
+  components() %>%
+  autoplot()  + labs(y = "Indice", x="Mes",
+    title = "Descomposición STL serie de Industrias metálicas básicas" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP5<-EXJ %>% 
+  filter(Subsector == "Industrias metálicas básicas")%>%
+  PACF(`Exportaciones totales`) %>% autoplot()
+
+CP6<-EXJ %>% 
+  filter(Subsector == "Industrias metálicas básicas")%>%
+  ACF(`Exportaciones totales`) %>% autoplot()
+
+
+(CP0)
+
+(CP1 | CP2 ) / (CP3 | CP4 ) / (CP5 | CP6)
+
+```
+
+
+
+```{r, echo=FALSE, fig.align='center'}
+
+fitAG <- EXJ%>%
+  filter(Subsector == "Industrias metálicas básicas") %>%
+  model(ARIMA(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE))
+report(fitAG)
+
+fitAG %>% gg_tsresiduals()
+
+EXJ %>%
+  filter(Subsector == "Industrias metálicas básicas") %>% 
+  model(ARIMA(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(EXJ) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (0,1,2)(2,0,1) de Agricultura")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+**Industria química**
+
+```{r, fig.align='center', echo=FALSE}
+
+CP0<-EXJ %>% 
+  filter(Subsector == "Industria química")%>%
+  autoplot()
+
+CP1<-EXJ %>%
+  filter(Subsector == "Industria química") %>%
+  gg_season(`Exportaciones totales`, labels = "both") +
+  labs(y = "Exportaciones totales",x="Q",
+       title = "Grafica estacional Industria química")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP2<-EXJ %>% 
+  filter(Subsector == "Industria química") %>%
+  gg_subseries(`Exportaciones totales`) +
+  labs(y = "Indice", x="Mes",
+    title = "Subserie de Industria química" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP3<-EXJ %>% 
+  filter(Subsector == "Industria química") %>% 
+  gg_lag(`Exportaciones totales`, geom = "point", lags=1:3) +
+  labs(title = "Diferenciacion en Industria química")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP4<-EXJ %>%
+  filter(Subsector== "Industria química") %>%
+  model(STL(`Exportaciones totales` ~ trend(window=7) + season(window='periodic'),
+    robust = TRUE)) %>%
+  components() %>%
+  autoplot()  + labs(y = "Indice", x="Mes",
+    title = "Descomposición STL serie de Industria química" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP5<-EXJ %>% 
+  filter(Subsector == "Industria química")%>%
+  PACF(`Exportaciones totales`) %>% autoplot()
+
+CP6<-EXJ %>% 
+  filter(Subsector == "Industria química")%>%
+  ACF(`Exportaciones totales`) %>% autoplot()
+
+
+(CP0)
+
+(CP1 | CP2 ) / (CP3 | CP4 ) / (CP5 | CP6)
+
+```
+
+
+
+```{r, echo=FALSE, fig.align='center'}
+
+fitAG <- EXJ%>%
+  filter(Subsector == "Industria química") %>%
+  model(ARIMA(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE))
+report(fitAG)
+
+fitAG %>% gg_tsresiduals()
+
+EXJ %>%
+  filter(Subsector == "Industria química") %>% 
+  model(ARIMA(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(EXJ) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (0,1,1)(0,0,2) de Industria química")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+
+
+
+**Industria del plástico y del hule**
+
+```{r, fig.align='center', echo=FALSE}
+
+CP0<-EXJ %>% 
+  filter(Subsector == "Industria del plástico y del hule")%>%
+  autoplot()
+
+CP1<-EXJ %>%
+  filter(Subsector == "Industria del plástico y del hule") %>%
+  gg_season(`Exportaciones totales`, labels = "both") +
+  labs(y = "Exportaciones totales",x="Q",
+       title = "Grafica estacional Industria del plástico y del hule")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP2<-EXJ %>% 
+  filter(Subsector == "Industria del plástico y del hule") %>%
+  gg_subseries(`Exportaciones totales`) +
+  labs(y = "Indice", x="Mes",
+    title = "Subserie de Industria del plástico y del hule" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP3<-EXJ %>% 
+  filter(Subsector == "Industria del plástico y del hule") %>% 
+  gg_lag(`Exportaciones totales`, geom = "point", lags=1:3) +
+  labs(title = "Diferenciacion en Industria del plástico y del hule")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP4<-EXJ %>%
+  filter(Subsector== "Industria del plástico y del hule") %>%
+  model(STL(`Exportaciones totales` ~ trend(window=7) + season(window='periodic'),
+    robust = TRUE)) %>%
+  components() %>%
+  autoplot()  + labs(y = "Indice", x="Mes",
+    title = "Descomposición STL serie de Industria del plástico y del hule" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP5<-EXJ %>% 
+  filter(Subsector == "Industria del plástico y del hule")%>%
+  PACF(`Exportaciones totales`) %>% autoplot()
+
+CP6<-EXJ %>% 
+  filter(Subsector == "Industria del plástico y del hule")%>%
+  ACF(`Exportaciones totales`) %>% autoplot()
+
+
+(CP0)
+
+(CP1 | CP2 ) / (CP3 | CP4 ) / (CP5 | CP6)
+
+```
+
+
+
+```{r, echo=FALSE, fig.align='center'}
+
+fitAG <- EXJ%>%
+  filter(Subsector == "Industria del plástico y del hule") %>%
+  model(SNAIVE(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE))
+report(fitAG)
+
+fitAG %>% gg_tsresiduals()
+
+EXJ %>%
+  filter(Subsector == "Industria del plástico y del hule") %>% 
+  model(SNAIVE(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(EXJ) +
+  labs(y = "Indice", title = "Pronóstico Naive de Industria del plástico y del hule")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+
+
+
+
+
+**Industria del papel**
+
+```{r, fig.align='center', echo=FALSE}
+
+CP0<-EXJ %>% 
+  filter(Subsector == "Industria del papel")%>%
+  autoplot()
+
+CP1<-EXJ %>%
+  filter(Subsector == "Industria del papel") %>%
+  gg_season(`Exportaciones totales`, labels = "both") +
+  labs(y = "Exportaciones totales",x="Q",
+       title = "Grafica estacional Industria del papel")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP2<-EXJ %>% 
+  filter(Subsector == "Industria del papel") %>%
+  gg_subseries(`Exportaciones totales`) +
+  labs(y = "Indice", x="Mes",
+    title = "Subserie de Industria del papel" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP3<-EXJ %>% 
+  filter(Subsector == "Industria del papel") %>% 
+  gg_lag(`Exportaciones totales`, geom = "point", lags=1:3) +
+  labs(title = "Diferenciacion en Industria del papel")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP4<-EXJ %>%
+  filter(Subsector== "Industria del papel") %>%
+  model(STL(`Exportaciones totales` ~ trend(window=7) + season(window='periodic'),
+    robust = TRUE)) %>%
+  components() %>%
+  autoplot()  + labs(y = "Indice", x="Mes",
+    title = "Descomposición STL serie de Industria del papel" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CP5<-EXJ %>% 
+  filter(Subsector == "Industria del papel")%>%
+  PACF(`Exportaciones totales`) %>% autoplot()
+
+CP6<-EXJ %>% 
+  filter(Subsector == "Industria del papel")%>%
+  ACF(`Exportaciones totales`) %>% autoplot()
+
+
+(CP0)
+
+(CP1 | CP2 ) / (CP3 | CP4 ) / (CP5 | CP6)
+
+```
+
+
+
+```{r, echo=FALSE, fig.align='center'}
+
+fitAG <- EXJ%>%
+  filter(Subsector == "Fabricación de equipo de computación, comunicación, medición y de otros equipos, componentes y accesorios electrónicos") %>%
+  model(SNAIVE(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE))
+report(fitAG)
+
+fitAG %>% gg_tsresiduals()
+
+EXJ %>%
+  filter(Subsector == "Fabricación de equipo de computación, comunicación, medición y de otros equipos, componentes y accesorios electrónicos") %>% 
+  model(SNAIVE(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(EXJ) +
+  labs(y = "Indice", title = "Pronóstico Naive de Fabricación de equipo de Cómputo")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+```{r, echo=FALSE, fig.align='center'}
+
+fitAG <- EXJ%>%
+  filter(Subsector == "Fabricación de equipo de transporte") %>%
+  model(SNAIVE(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE))
+report(fitAG)
+
+fitAG %>% gg_tsresiduals()
+
+EXJ %>%
+  filter(Subsector == "Fabricación de equipo de transporte") %>% 
+  model(SNAIVE(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(EXJ) +
+  labs(y = "Indice", title = "Pronóstico Naive de Fabricación de equipo de transporte")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+

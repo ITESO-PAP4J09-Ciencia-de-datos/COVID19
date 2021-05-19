@@ -1,0 +1,443 @@
+---
+title: "INDICADORES MACROECONÓMICOS DEL ESTADO DE JALISCO"
+output: ioslides_presentation
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## QUÉ SON 
+
+Los indicadores macroeconómicos son estadísticas económicas que se liberan periódicamente por agencias gubernamentales y organizaciones privadas. Estos indicadores proporcionan información sobre el rendimiento económico de un país o de una región en particular y, por lo tanto, tienen un impacto significativo sobre el mercado de divisas y las operaciones comerciales.  
+
+
+Tomamos los datos de los índicadores que nos parecieron más importantes para ver como se encuentra Jalisco y cúal va a ser su pronóstico
+
+
+
+## INPC (Indicador Nacional de Precios al Consumidor)
+
+Vamos a analizar el INPC (Indice Nacional de Precios al Consumidor). 
+Primero hay que definir que es el índice de precios al consumidor o índice de precios de consumo(comúnmente llamado por su sigla IPC) ; es un índice económico en el que se valoran los precios de un determinado conjunto de bienes y servicios. 
+
+Los datos con los que vamos a estar trabajando son mensuales desde el 2018 hasta la actualidad del estado de Jalisco y se le va a dar el tratamiento de Indice, es decir no son miles de pesos , es un conjunto de datos que se proyecta en un dato estadistico.
+
+
+```{r, include=FALSE, warning=FALSE}
+library(fable)
+library(feasts)
+library(tsibble)
+library(tsibbledata)
+library(readxl)
+library(tidyverse)
+library(lubridate)
+library(patchwork)
+library(plotly)
+library(gganimate)
+library(quantmod)
+#library(dplyr)
+library(GGally)
+library("easypackages")
+packages("tidyverse","lubridate", "patchwork", "fpp2","fpp3","scales","DT")
+
+```
+
+```{r, include=FALSE, warning=FALSE, echo=FALSE}
+INPC <- read_excel("BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "INPC")
+INPCJ <- INPC[INPC$`Nombre entidad` == "Jalisco",] 
+INPCJ <- select(INPCJ, -"Clave entidad", -"Nombre entidad")
+```
+
+```{r, include=FALSE, warning=FALSE}
+INPC <- read_excel("HistINPC.xlsx")
+INPCG <- select(INPC, -"INPC Nacional")
+INPCN <- select(INPC, -"INPC Guadalajara")
+```
+
+
+```{r, include=FALSE, warning=FALSE}
+INPCG <- INPCG %>%
+  mutate(Month = yearmonth(Fecha)) %>%
+  select(-Fecha) %>%
+  as_tsibble(index = Month) #%>% 
+#mutate(diff_INPCJ = difference(Índice))
+
+```
+
+
+```{r, include=FALSE, warning=FALSE}
+INPCN <- INPCN %>%
+  mutate(Month = yearmonth(Fecha)) %>%
+  select(-Fecha) %>%
+  as_tsibble(index = Month) #%>% 
+#mutate(diff_INPCJ = difference(Índice))
+
+```
+
+
+
+
+```{r, include=FALSE, warning=FALSE}
+INPCJ <- INPCJ %>%
+  mutate(Month = yearmonth(Fecha)) %>%
+  select(-Fecha) %>%
+  as_tsibble(key = c(`Objeto de gasto`),
+             index = Month) #%>% 
+#mutate(diff_INPCJ = difference(Índice))
+
+```
+
+
+## INPC POR OBJETO DE GASTO
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.dim= c(8,6)}
+autoplot(INPCJ) 
+```
+
+## INPC 
+
+En esta tabla podemos ver cuales son los valores maximos , minimos , promedios y las desviaciones de los diferentes objetos de gasto producidos por el indice del INPC, para hacernos una idea de cuanto son los cambios 
+
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.dim= c(8,6)}
+
+INPCJ %>% 
+  features(Índice, c(list(mean =mean), list(min=min), list(max=max), list(sd=sd))) %>% datatable(filter = "top")
+```
+
+## INPC ÍNDICE GENERAL
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.dim= c(8,6)}
+IG1<-INPCJ %>%
+  filter(`Objeto de gasto` == "Índice General") %>%
+  gg_season(Índice, labels = "both") +
+  labs(y = "Indice",x="Mes",
+       title = "Grafica estacional INPC General")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+IG2<-INPCJ %>% 
+  filter(`Objeto de gasto` == "Índice General") %>%
+  gg_subseries(Índice, col="magenta") +
+  labs(y = "Indice", x="Mes",
+    title = "Subserie de Índice General" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+(IG1 | IG2 )
+```
+
+## INPC ÍNDICE GENERAL
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.dim= c(8,6)}
+IG3<-INPCJ %>% 
+  filter(`Objeto de gasto` == "Índice General") %>% 
+  gg_lag(Índice, geom = "point", lags=1:3) +
+  labs(title = "Diferenciacion en Índice General")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+IG4<-INPCJ %>%
+  filter(`Objeto de gasto` == "Índice General") %>%
+  model(STL(Índice ~ trend(window=7) + season(window='periodic'),
+    robust = TRUE)) %>%
+  components() %>%
+  autoplot(col="blue")  + labs(y = "Indice", x="Mes",
+    title = "Descomposición STL serie de Índice General" )+
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+ (IG3 | IG4 ) 
+```
+
+## INPC ÍNDICE GENERAL
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.dim= c(8,6)}
+IG5<-INPCJ %>% 
+  filter(`Objeto de gasto` == "Índice General")%>%
+  PACF(Índice) %>% autoplot(col="magenta")
+
+IG6<-INPCJ %>% 
+  filter(`Objeto de gasto` == "Índice General")%>%
+  ACF(Índice) %>% autoplot(col="cyan")
+
+(IG5 | IG6)
+```
+
+## INPC ÍNDICE GENERAL MODELO
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.dim= c(8,6)}
+fitIG <- INPCJ%>%
+  filter(`Objeto de gasto` == "Índice General") %>%
+  model(ARIMA(Índice ~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE))
+report(fitIG)
+
+INPCJ %>%
+  filter(`Objeto de gasto` == "Índice General") %>% 
+  model(ARIMA(Índice ~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(INPCJ) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (0,1,0) de Indice General")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+## INPC ÍNDICE GENERAL RESIDUALES
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.dim= c(10,8)}
+
+fitIG %>% gg_tsresiduals()
+```
+## INPC PRONÓSTICO ARIMA
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.dim= c(10,8)}
+ ABT<-INPCJ %>%
+  filter(`Objeto de gasto` == "Alimentos, bebidas y tabaco") %>% 
+  model(ARIMA(Índice ~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(INPCJ) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (0,1,0) de Alimentos, bebidas y tabaco")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+EE<-INPCJ %>%
+  filter(`Objeto de gasto` == "Educación y esparcimiento") %>% 
+  model(ARIMA(Índice~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(INPCJ) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (1,1,0) de Educación y esparcimiento")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+(ABT/EE)
+
+```
+
+## INPC PRONÓSTICO ARIMA
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.dim= c(10,8)}
+
+SCP<-INPCJ %>%
+  filter(`Objeto de gasto` == "Salud y cuidado personal") %>% 
+  model(ARIMA(Índice ~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(INPCJ) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (4,1,0) de Salud y cuidado personal")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+RCA<-INPCJ %>%
+  filter(`Objeto de gasto` == "Ropa, calzado y accesorios") %>% 
+  model(ARIMA(Índice,
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(INPCJ) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (0,0,1) de Ropa, calzado y accesorios")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+(SCP/RCA)
+```
+
+## INPC PRONÓSTICO ARIMA
+
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.dim= c(10,8)}
+
+OT<-INPCJ %>%
+  filter(`Objeto de gasto` == "Otros servicios") %>% 
+  model(ARIMA(Índice ~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(INPCJ) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (0,1,0) de Otros servicios")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+OT
+
+```
+
+
+## MODELO NAIVE 
+
+Un clasificador Naive Bayes es un clasificador probabilístico fundamentado en el teorema de Bayes y algunas hipótesis simplificadoras adicionales. Es a causa de estas simplificaciones, que se suelen resumir en la hipótesis de independencia entre las variables predictoras.
+Todos los parámetros del modelo (por ejemplo, clases prioris y características de las distribuciones de probabilidad) se puede aproximar con frecuencias relativas del conjunto de entrenamiento. Estas son las estimaciones de máxima verosimilitud de las probabilidades.
+
+## INPC PRONÓSTICO NAIVE
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.dim= c(10,8)}
+MAAC<-INPCJ %>%
+  filter(`Objeto de gasto` == "Muebles, aparatos y accesorios domésticos") %>% 
+  model(SNAIVE(Índice,
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(INPCJ) +
+  labs(y = "Indice", title = "Pronóstico SNAIVE de Muebles, aparatos y accesorios domésticos")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+MAAC
+
+```
+
+
+
+## PRONOSTICO INPC NACIONAL 
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.dim= c(10,8)}
+
+INPCN %>%
+  model(ARIMA(`INPC Nacional` ~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(INPCN) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (5,2,1) de Indice General")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+## PRONOSTICO INPC GUADALAJARA
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.dim= c(10,8)}
+INPCG %>%
+  model(ARIMA(`INPC Guadalajara` ~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(INPCG) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (2,2,4) de Indice General")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
+## EXPORTACIONES
+
+Vamos a observar las exportaciones que se realizaron en Jalisco en diferentes sectores productivos, de hace unos años hasta el último reporte de finales de 2020.
+Las exportaciones son muy importantes en un estado ya que representa en cierta manera la productuvidad que esta teniendo en los diferentes sector y la capacidad de produccion que tiene . Asi como que estas fomentan el movimiento de la economia y producen ganacias para el estado. 
+
+Los datos que vamos a estar analizando estan en Millones de pesos y las muestras de esos datos se presentan de manera trimestral, una vez cada cuarto del año, asi vemos 4 divisiones en el total anual.
+
+## EXPORTACIONES PRONOSTICO ARIMA
+
+
+```{r, include=FALSE, warning=FALSE}
+EX <- read_excel("BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "Exportaciones")
+EXJ <- EX[EX$`Nombre entidad` == "Jalisco",]
+EXJ<- select(EXJ , -"Nombre entidad")
+```
+
+
+
+```{r, include=FALSE, warning=FALSE}
+EXJ <- EXJ %>%
+  mutate(Quarter =yearquarter(dmy(Fecha))) %>%
+  select(-Fecha) %>%
+  as_tsibble(key = c(Subsector), index = Quarter)
+```
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.dim= c(6,4)}
+AG<-EXJ %>%
+  filter(Subsector == "Agricultura A/") %>% 
+  model(ARIMA(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(EXJ) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (0,0,0)(0,1,0) de Agricultura A/")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+CAC<-EXJ %>%
+  filter(Subsector == "Curtido y acabado de cuero y piel, y fabricación de productos de cuero, piel y materiales sucedáneos") %>% 
+  model(ARIMA(`Exportaciones totales`~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(EXJ) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (0,0,4) de Curtido y acabado de cuero y piel")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+(AG/CAC)
+
+```
+
+## EXPORTACIONES PRONOSTICO ARIMA
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.dim= c(10,8)}
+
+IM<-EXJ %>%
+  filter(Subsector == "Otras industrias manufactureras") %>% 
+  model(ARIMA(`Exportaciones totales`~ PDQ(0,0,0),
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(EXJ) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (0,1,4) de Otras industrias manufactureras")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+IMB<-EXJ %>%
+  filter(Subsector == "Industrias metálicas básicas") %>% 
+  model(ARIMA(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(EXJ) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (0,1,2)(2,0,1) de Industrias metálicas básicas")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+(IM/IMB)
+```
+
+## EXPORTACIONES PRONOSTICO NAIVE
+
+
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.dim= c(10,8)}
+IQ<-EXJ %>%
+  filter(Subsector == "Industria química") %>% 
+  model(ARIMA(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(EXJ) +
+  labs(y = "Indice", title = "Pronóstico ARIMA (0,1,1)(0,0,2) de Industria química")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+IPH<-EXJ %>%
+  filter(Subsector == "Industria del plástico y del hule") %>% 
+  model(SNAIVE(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(EXJ) +
+  labs(y = "Indice", title = "Pronóstico Naive de Industria del plástico y del hule")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+(IQ/IPH)
+
+```
+
+
+## EXPORTACIONES PRONOSTICO NAIVE
+
+```{r, fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, fig.dim= c(10,8)}
+
+FEC<-EXJ %>%
+  filter(Subsector == "Fabricación de equipo de computación, comunicación, medición y de otros equipos, componentes y accesorios electrónicos") %>% 
+  model(SNAIVE(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(EXJ) +
+  labs(y = "Indice", title = "Pronóstico Naive de Fabricación de equipo de Cómputo")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+FET<-EXJ %>%
+  filter(Subsector == "Fabricación de equipo de transporte") %>% 
+  model(SNAIVE(`Exportaciones totales`,
+              stepwise = FALSE, approximation = FALSE)) %>% 
+  forecast(h = "2 years") %>%
+  autoplot(EXJ) +
+  labs(y = "Indice", title = "Pronóstico Naive de Fabricación de equipo de transporte")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+(FEC/FET)
+
+```
+
+

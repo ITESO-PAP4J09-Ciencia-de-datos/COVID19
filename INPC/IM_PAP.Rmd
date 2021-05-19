@@ -1,0 +1,117 @@
+---
+title: "Informacion_PAP"
+output: html_document
+---
+
+
+```{r pkgs, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(lubridate)
+library(patchwork)
+library(gapminder)
+library(plotly)
+library(gganimate)
+library(quantmod)
+library(readxl)
+library(dplyr)
+library(tables)
+library(highcharter)
+library(treemap)
+library(rAmCharts)
+```
+
+```{r include=FALSE}
+IM <- read_excel("C:/Users/mamarta/Downloads/BD_INDICADORES_MACROECONOMICOS.xlsx")
+#PIB <- read_excel("C:/Users/mamarta/Downloads/BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "PIB")
+INPC <- read_excel("C:/Users/mamarta/Downloads/BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "INPC")
+#DENUE<- read_excel("C:/Users/mamarta/Downloads/BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "DENUE")
+#IMSSJ<- read_excel("C:/Users/mamarta/Downloads/BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "IMSS")
+#PatronesJ<- read_excel("C:/Users/mamarta/Downloads/BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "Patrones")
+#IED2<- read_excel("C:/Users/mamarta/Downloads/BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "IED2")
+#VisitantesJ<- read_excel("C:/Users/mamarta/Downloads/BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "Visitantes")
+Exportaciones<- read_excel("C:/Users/mamarta/Downloads/BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "Exportaciones")
+#ENOE<- read_excel("C:/Users/mamarta/Downloads/BD_INDICADORES_MACROECONOMICOS.xlsx", sheet = "ENOE")
+```
+
+```{r}
+#PIBJ <- PIB[PIB$`Nombre entidad` == "Jalisco",]
+INPCJ <- INPC[INPC$`Nombre entidad` == "Jalisco",] 
+INPCJ <- select(INPCJ, -"Clave entidad", -"Nombre entidad")
+#DENUEJ <- DENUE[DENUE$`Municipio` == c("Tonalá","Zapopan","Tlajomulco de Zúñiga", "San Pedro Tlaquepaque", "Guadalajara"), ]
+#IED2J <- IED2[IED2$C == "0",]
+ExportacionesJ <- Exportaciones[Exportaciones$`Nombre entidad` == "Jalisco",]
+#ENOEJ <- ENOE[ENOE$`Nombre entidad` == "Jalisco",]
+
+```
+
+EXPORTACIONES JALISCO
+
+ Variables trimestrales y en miles de dolares
+
+```{r}
+ggplot(ExportacionesJ, aes(y=log(`Exportaciones totales`),x=Subsector))+
+  geom_boxplot() + coord_flip()
+  #theme(axis.text.x=element_text(angle=90))
+  #+ facet_wrap(~ ExportacionesJ$Subsector)
+```
+
+
+
+
+```{r}
+ExportacionesJ_T10 <- top_n( ExportacionesJ, 10, `Exportaciones totales`)
+knitr::kable(ExportacionesJ_T10)
+```
+
+```{r}
+i <- aggregate(ExportacionesJ$`Exportaciones totales`, list(Subsector = ExportacionesJ$Subsector), FUN = function(x) c(PROMEDIO=round(mean(x),2), DESVIACIÓN=round(sd(x),2), MAXIMO=round(max(x),2), MINIMO=min(x),SUMA=as.numeric(sum(x))))
+
+```
+
+```{r}
+di<- i$x 
+Subsector<- i$Subsector
+n<-cbind(Subsector,di)
+
+n<- as.data.frame(n)
+knitr::kable(n, align = "l")
+
+```
+
+
+
+INPC JALISCO
+
+
+```{r}
+ggplot(INPCJ, aes(x=`Índice`))+ geom_histogram(color='darkblue', fill='blue') + facet_wrap(~ INPCJ$`Objeto de gasto`)
+
+```
+
+```{r}
+ggplot(INPCJ,aes(x = Fecha, y = Índice, color=`Objeto de gasto`)) + geom_line() +facet_wrap(~`Objeto de gasto`) + theme(legend.position = "None") + geom_smooth(method = "lm", se = FALSE)
+
+
+```
+
+
+
+
+```{r}
+INPCJ_T10 <- top_n( INPCJ, 10, Índice)
+knitr::kable(INPCJ_T10, align = "l")
+```
+
+
+```{r}
+j <- aggregate(INPCJ$Índice, list(OBJETO_DE_GASTO = INPCJ$`Objeto de gasto`), FUN = function(x) c(PROMEDIO=round(mean(x),2), DESVIACIÓN=round(sd(x),2), MAXIMO=round(max(x),2), MINIMO=round(min(x),2),SUMA=round(sum(x))))
+```
+
+```{r}
+dij<- j$x 
+Objeto_de_gasto<- j$OBJETO_DE_GASTO
+n<-cbind(Objeto_de_gasto,dij)
+knitr::kable(n, align = "l")
+```
+
+
