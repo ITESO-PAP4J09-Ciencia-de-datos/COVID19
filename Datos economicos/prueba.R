@@ -1,0 +1,3 @@
+#Script prueba
+
+plot(cars)
