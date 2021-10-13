@@ -49,10 +49,10 @@ library(tmaptools)
 library(Hmisc)
 library(mxmaps) #se instala con un repo de gitgub con el 
                 #siguiente comando
-                #if (!require("devtools")) {
-#     install.packages("devtools")
-# }
-# devtools::install_github("diegovalle/mxmaps")
+  #if (!require("devtools")) {
+   # install.packages("devtools")
+#}
+ #devtools::install_github("diegovalle/mxmaps")
 
 library(sf)
 library(scales) # needed for comma
