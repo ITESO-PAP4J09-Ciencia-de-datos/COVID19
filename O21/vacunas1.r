@@ -1,6 +1,6 @@
 library(tidyverse)
-library(XML)
-library(rjson)
+library(dplyr)
+library(ggplot2)
 
 
 DF1 <- readr::read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations.csv")
@@ -40,16 +40,6 @@ VaccManufacturer %>%
 
 #VaccTemp = subset(VaccManufacturerSplited, select = -c(region))
 
-# VaccManufacturerSplited$mostUsedVaccine <- pmax(VaccManufacturerSplited$CanSino, 
-#                                                 VaccManufacturerSplited$"Johnson&Johnson",
-#                                                 VaccManufacturerSplited$Moderna, 
-#                                                 VaccManufacturerSplited$"Oxford/AstraZeneca",
-#                                                 VaccManufacturerSplited$"Pfizer/BioNTech", 
-#                                                 VaccManufacturerSplited$"Sinopharm/Beijing",
-#                                                 VaccManufacturerSplited$Sinovac, 
-#                                                 VaccManufacturerSplited$"Sputnik V")
-
-
 
 VaccManufacturerFinal <- VaccManufacturerSplited %>% 
   #tidying
@@ -72,8 +62,7 @@ VaccManufacturerFinal <- VaccManufacturerSplited %>%
 #clean_names() # intento de quitar los puntos de los nombres de las columnas
   
 
-# colnames(VaccManufacturerFinal) <- gsub(".", " ", colnames(VaccManufacturerFinal)) # intento de quitar los puntos de los nombres de las columnas
-#names(VaccManufacturerFinal) <- make.names(names(yourdf))
+
 #creating map
 
 
@@ -94,24 +83,14 @@ mapa <- ggplot(mapData, aes(x=long, y=lat, group=group)) +
     aes(
       label = region, 
       fill = popularVaccine, 
-      #text = paste( # intento de poner los datos en un text
-       # "CanSino:",`Pct_.CanSino`,
-        #"J&J:",`Pct_.J_J`,
-        #"Moderna:",`Pct_.Moderna`,
-        #"AstraZeneca:",`Pct_.AstraZeneca`,
-        #"Pfizer:",`Pct_.Pfizer`,
-        #"Sinopharm:",`Pct_.Sinopharm`,
-        #"Sinovac:",`Pct_.Sinovac`,
-        #"Sputnik",`Pct_.Sputnik`
-      #),
-      #label1 = Pct.Moderna,
-      label2 = `Pct.CanSino`,
-      label3 = `Pct.J_J`,
-      label4 = `Pct.AstraZeneca`,
-      label5 = `Pct.Pfizer`,
-      label6 = `Pct.Sinopharm`,
-      label7 = `Pct.Sinovac`,
-      label8 = `Pct.Sputnik`
+      label1 = `Moderna_pct`,
+      label2 = `CanSino_pct`,
+      label3 = `J_J_pct`,
+      label4 = `AstraZeneca_pct`,
+      label5 = `Pfizer_pct`,
+      label6 = `Sinopharm_pct`,
+      label7 = `Sinovac_pct`,
+      label8 = `Sputnik_pct`
       #label1 = text
         ), 
     color = "black") + 
